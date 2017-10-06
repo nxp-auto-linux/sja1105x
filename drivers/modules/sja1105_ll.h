@@ -154,4 +154,14 @@
 #define SJA1105_REG_PORT_HIGH_STATUS1(_port_)     (0x400UL + (_port_)*16)
 #define SJA1105_REG_PORT_HIGH_STATUS2(_port_)     (0x600UL + (_port_)*16)
 
+
+/* CGU Registers */
+#define SJA1105_CFG_PAD_MIIX_ID_ADDR		0x100810
+#define SJA1105_CFG_PAD_MIIX_ID_PORT(port)	(SJA1105_CFG_PAD_MIIX_ID_ADDR \
+						 + port)
+
+#define SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS		(1 << 9)
+#define SJA1105_CFG_PAD_MIIX_ID_RXC_PD			(1 << 8)
+
+
 #endif

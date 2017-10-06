@@ -357,6 +357,51 @@ static u32 sja1105_read_reg32(struct spi_device *spi, u32 reg_addr)
 	return le32_to_cpu(resp[1]);
 }
 
+
+/**
+ * sja1105_write_reg32  - write 32bit register
+ * @spi: The spi device
+ * @reg_addr: The register address to be written
+ * @val: The value written to register
+ *
+ * @return: error status
+ */
+static int sja1105_write_reg32(struct spi_device *spi, u32 reg_addr, u32 val)
+{
+	u32 cmd[2], resp[2], upper, down;
+	struct spi_message m;
+	struct spi_transfer t;
+	int rc;
+
+	if (verbosity > 3) dev_info(&spi->dev, "writing 4bytes @%08x tlen %d t.bits_per_word %d\n", reg_addr, 8, 64);
+
+	cmd[0] = cpu_to_le32 (CMD_ENCODE_RWOP(CMD_WR_OP) | CMD_ENCODE_ADDR(reg_addr) | CMD_ENCODE_WRD_CNT(1));
+	upper = (cmd[0] & 0x0000FFFF) << 16;
+	down = (cmd[0] & 0xFFFF0000) >> 16;
+	cmd[0] = upper | down;
+
+	cmd[1] = val;
+	upper = (cmd[1] & 0x0000FFFF) << 16;
+	down = (cmd[1] & 0xFFFF0000) >> 16;
+	cmd[1] = upper | down;
+
+	spi_message_init(&m);
+	memset(&t, 0, sizeof(t));
+	t.tx_buf = cmd;
+	t.rx_buf = resp;
+	t.len = sizeof(cmd);
+	t.bits_per_word = 16;
+	spi_message_add_tail(&t, &m);
+	rc = spi_sync(spi, &m);
+
+	if (rc)
+		if (verbosity > 3)
+			dev_info(&spi->dev, "spi_sync rc %d\n", rc);
+
+	return rc;
+}
+
+
 /*
  * Public functions
  *
@@ -988,32 +1033,55 @@ static int sja1105_netdev_event(struct notifier_block *this, unsigned long event
 {
 	struct sja1105_context_data *switch_ctx = container_of(this, struct sja1105_context_data, notifier_block);
 	struct spi_device *spi = switch_ctx->spi_dev;
-	struct port_desc *port;
-	int err, i;
+	int i, j, max_retries = 5;
+	u32 cfg_pad_mii_reg;
 
 	spi_set_drvdata(spi, switch_ctx);
 
-	if (event == NETDEV_PRE_UP) {
-		switch_ctx->switch_id = 1;
-		sja1105_reset(spi);
-		init_completion(&switch_ctx->conf_loaded);
-		err = request_firmware_nowait(THIS_MODULE,
-			FW_ACTION_NOHOTPLUG,
-			switch_ctx->fw_name,
-			&spi->dev,
-			GFP_KERNEL,
-			spi,
-			sja1105_configuration_load);
-#if 0
-		if (err)
-			dev_err(&spi->dev, "Firmware loading failed with %d!\n", err);
-		else {
-			if (verbosity) dev_info(&spi->dev, "SJA1105 switch firmware request ongoing\n");
-			sja1105_debugfs_init(spi);
-		}
-#endif
-	}
+	if (event == NETDEV_CHANGE) {
+		for (i = 0; i < SJA1105_PORT_NB; i++) {
+			cfg_pad_mii_reg = sja1105_read_reg32(spi,
+						 SJA1105_CFG_PAD_MIIX_ID_PORT(i));
 
+			/* Toggle RX Clock PullDown and Bypass */
+			cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+			cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+
+			for (j = 0; j < max_retries; j++) {
+				sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
+
+				if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+									  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
+					dev_err(&spi->dev, "Failed to reset delay\n");
+					continue;
+				}
+				else {
+					break;
+				}
+			}
+			if (j == max_retries)
+				return -EAGAIN;
+
+			cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+			cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+
+			for (j = 0; j < max_retries; j++) {
+				sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
+
+				if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+									  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
+					dev_err(&spi->dev, "Failed to reset delay\n");
+					continue;
+				}
+				else {
+					break;
+				}
+			}
+			if (j == max_retries)
+				return -EAGAIN;
+
+		}
+	}
 	return NOTIFY_STOP;
 }
 
