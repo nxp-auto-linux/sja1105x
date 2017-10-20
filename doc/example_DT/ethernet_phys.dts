@@ -1,0 +1,48 @@
+ethernet@02188000 {
+	compatible = "fsl,imx6q-fec";
+	reg = <0x2188000 0x4000>;
+	interrupts-extended = <0x2 0x0 0x76 0x4 0x2 0x0 0x77 0x4>;
+	clocks = <0x3 0x75 0x3 0x75 0x3 0xbe>;
+	clock-names = "ipg", "ahb", "ptp";
+	stop-mode = <0x11 0x34 0x1b>;
+	fsl,wakeup_irq = <0x0>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <0x26>;
+	phy-mode = "rgmii";
+	fsl,magic-packet;
+
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+
+	mdio {
+		#address-cells = <0x1>;
+		#size-cells = <0x0>;
+
+		phy0: ethernet-phy@8	 {
+			compatible = "ethernet-phy-id0180.DC80";
+			reg = <0x8>;
+			max-speed = <0x64>;
+		};
+
+		phy1: ethernet-phy@9 {
+			compatible = "ethernet-phy-id0000.0000";
+			reg = <0x9>;
+			max-speed = <0x64>;
+		};
+
+		phy2: ethernet-phy@e {
+			compatible = "ethernet-phy-id0180.DC80";
+			reg = <0xe>;
+			max-speed = <0x64>;
+		};
+
+		phy3: ethernet-phy@f {
+			compatible = "ethernet-phy-id0000.0000";
+			reg = <0xf>;
+			max-speed = <0x64>;
+		};
+	};
+};

@@ -1,0 +1,60 @@
+ecspi@02008000 {
+	#address-cells = <0x1>;
+	#size-cells = <0x0>;
+	compatible = "fsl,imx6q-ecspi", "fsl,imx51-ecspi";
+	reg = <0x2008000 0x4000>;
+	interrupts = <0x0 0x1f 0x4>;
+	clocks = <0x3 0x70 0x3 0x70>;
+	clock-names = "ipg", "per";
+	dmas = <0x6 0x3 0x7 0x1 0x6 0x4 0x7 0x2>;
+	dma-names = "rx", "tx";
+	status = "okay";
+	fsl,spi-num-chipselects = <0x1>;
+	cs-gpios = <0x9 0x13 0x0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <0xa 0xb>;
+	pinctrl-assert-gpios = <0xc 0x4 0x1>;
+
+	sja1105p@0 {
+		compatible = "nxp,sja1105p-switch";
+		firmware_name = "sja1105p-1_cfg.bin"; /* optional */
+		spi-max-frequency = <0x17d7840>;
+		spi-cpol;
+		reg = <0x0>;
+
+		port-0 {
+			is-host = <0x1>;
+			null-phy = <0x1>;
+			phy-ref = < 0x0 >;
+			logical-port-num = < 4 >;
+		};
+
+		port-1 {
+			is-host = <0x0>;
+			null-phy = <0x0>;
+			phy-ref = < &phy0 >;
+			logical-port-num = < 2 >;
+		};
+
+		port-2 {
+			is-host = <0x0>;
+			null-phy = <0x0>;
+			phy-ref = < &phy1 >;
+			logical-port-num = < 3 >;
+		};
+
+		port-3 {
+			is-host = <0x0>;
+			null-phy = <0x0>;
+			phy-ref = < &phy2 >;
+			logical-port-num = < 0 >;
+		};
+
+		port-4 {
+			is-host = <0x0>;
+			null-phy = <0x0>;
+			phy-ref = < &phy3 >;
+			logical-port-num = < 1 >;
+		};
+	};
+};

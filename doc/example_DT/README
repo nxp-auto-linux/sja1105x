@@ -1,0 +1,27 @@
+Propertie of the sja1105p node:
+------------------------------------
+
+"compatible"
+	-String that is matched against the of_device_id table "sja1105_dt_ids" in sja1105_init.c. Used to determine the switch type
+"firmware_name"
+	-(optional) Name of the firmware (in /lib/firmware) to be loaded for that switch
+"spi-max-frequency"
+	-the max SPI frequency
+"spi-cpol"
+	-SPI configuration to be used
+"reg"
+	-address of chip select
+
+
+
+Propertie of the port-X child node:
+------------------------------------
+
+"is-host"
+	-Determines if the port is a host port or not
+"null-phy"
+	-Determines if the port has a phy connected to it or not
+"phy-ref"
+	-phandle to the connected ethernet phy
+"logical-port-num"
+	-logical port number, used for the portmapping
