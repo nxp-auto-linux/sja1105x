@@ -1,0 +1,46 @@
+Release Name: Switch      Version: 0.3
+Configuration tool for
+SJA1105x
+
+Switch                    Description: Tool for generation of switch configurations
+config tool               This contains descriptions of the table layouts of the
+                          SJA1105 and SJA1105PQRS families.
+                          Author: NXP
+                          License: MIT license
+                          Format: source code
+                          Location: ./ethswt
+
+Example                   Description: Examples for the SJA1105(T) and SJA1105PQRS
+configurations            Author: NXP
+                          License: MIT license
+                          Format: source code
+                          Location: ./sample_generation_scripts
+
+Converter                 Description: Tool to convert a .hex configuration file into
+                          a C file.
+                          Author: NXP
+                          License: MIT license
+                          Format: source code
+                          Location: ./conversion
+
+Decoder                   Description: Tool to decode a .hex configuration file from
+                          a C file.
+                          Author: NXP
+                          License: MIT license
+                          Format: source code
+                          Location: ./conversion
+
+Intelhex                  Description: Intel HEX file format reader and converter
+                          Version 0.9.0
+                          Author: Alexander Belchenko
+                          License: BSD-3-Clause
+                          Format: source code
+                          Location: ./ethswt
+
+Prettytable               Description: Python library for easily displaying tabular
+                          data in a visually appealing ASCII table format
+                          Version 0.7.2
+                          Author: Luke Maurits
+                          License: BSD-3-Clause
+                          Format: source code
+                          Location: ./ethswt
