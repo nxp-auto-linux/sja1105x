@@ -332,8 +332,13 @@ static uint8_t configPort(uint8_t port, uint8_t switchId,  SJA1105P_speed_t spee
 				ret += SJA1105P_setupClockDelay(CLOCK_DELAY_92_7_DEG, port, switchId, SJA1105P_e_direction_TX);
 				/* 855 1 ns in wrong direction; 765
 				 * CLOCK_DELAY_92_7_DEG */
-				ret +=
-				SJA1105P_setupClockDelay(CLOCK_DELAY_92_7_DEG, port, switchId, SJA1105P_e_direction_RX);
+
+				if (speed == SJA1105P_e_speed_1_GBPS)
+					ret += SJA1105P_setupClockDelay(
+						CLOCK_DELAY_92_7_DEG,
+						port,
+						switchId,
+						SJA1105P_e_direction_RX);
 
 			    }
 			}
