@@ -25,7 +25,9 @@ define install_driver
 	$(eval KERNEL_VERSION := $(shell cat $(KERNELDIR)/include/config/kernel.release))
 
 	install -D sja1105.ko $(INSTALL_DIR)/lib/modules/$(KERNEL_VERSION)/kernel/drivers/spi/sja1105.ko
-	install -D $(CFG_GEN_PATH)/sja1105_cfg_mra2lt_*-$(1).bin $(INSTALL_DIR)/lib/firmware/
+	$(foreach SWITCH,$(shell seq 1 $(1)),
+		install -D $(CFG_GEN_PATH)/sja1105_cfg_mra2lt_$(SWITCH)-$(1).bin \
+		           $(INSTALL_DIR)/lib/firmware/sja1105_cfg_mra2lt_$(SWITCH)-$(1).bin;)
 	install -D sja1105.sh $(INSTALL_DIR)/home/root/sja1105.sh
 endef
 
