@@ -12,5 +12,5 @@
 
 
 OPT="max_hz=5000 verbosity=1"
-lsmod | grep sja1105 > /dev/null && rmmod sja1105
-insmod /lib/modules/`uname -r`/extra/sja1105.ko ${OPT}
+lsmod | grep -q "^sja1105"  > /dev/null || insmod /lib/modules/`uname -r`/extra/sja1105.ko ${OPT}
+
