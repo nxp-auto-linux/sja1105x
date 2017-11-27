@@ -500,52 +500,52 @@ uint8_t SJA1105_spiWrite32(uint8_t deviceSelect, uint8_t wordCount,
 
 #define NUM_MAC_LVL_COUNTERS1 4
 static char * mac_lvl_counters1 [NUM_MAC_LVL_COUNTERS1] = {
-	"N_RUNT",
-	"N_SOFERR",
-	"N_ALIGNERR",
-	"N_MIIERR",
+	"N_RUNT         ",
+	"N_SOFERR       ",
+	"N_ALIGNERR     ",
+	"N_MIIERR       ",
 };
 
 #define NUM_MAC_LVL_COUNTERS2 10
 static char * mac_lvl_counters2 [NUM_MAC_LVL_COUNTERS2] = {
-	"RSVD",
-	"SPCERRS",
-	"DRN664ERRS",
-	"RSVD",
-	"BAGDROP",
-	"LENDROPS",
-	"PORTDROPS",
-	"RSVD",
-	"SPCPRIOR",
-	"RSVD",
+	"RSVD           ",
+	"SPCERRS        ",
+	"DRN664ERRS     ",
+	"RSVD           ",
+	"BAGDROP        ",
+	"LENDROPS       ",
+	"PORTDROPS      ",
+	"RSVD           ",
+	"SPCPRIOR       ",
+	"RSVD           ",
 };
 
 #define NUM_ETH_HIGH_LVL_COUNTERS1 16
 static char * eth_high_lvl_counters1 [NUM_ETH_HIGH_LVL_COUNTERS1] = {
-	"N_TXBYTE",
-	"N_TXBYTESH",
-	"N_TXFRM",
-	"N_TXFRMSH",
-	"N_RXBYTE",
-	"N_RXBYTESH",
-	"N_RXFRM",
-	"N_RXFRMSH",
-	"N_POLERR",
-	"RSVD",
-	"RSVD",
-	"N_CRCERR",
-	"N_SIZERR",
-	"RSVD",
-	"N_VLANERR",
-	"N_N664ERR",
+	"N_TXBYTE       ",
+	"N_TXBYTESH     ",
+	"N_TXFRM        ",
+	"N_TXFRMSH      ",
+	"N_RXBYTE       ",
+	"N_RXBYTESH     ",
+	"N_RXFRM        ",
+	"N_RXFRMSH      ",
+	"N_POLERR       ",
+	"RSVD           ",
+	"RSVD           ",
+	"N_CRCERR       ",
+	"N_SIZERR       ",
+	"RSVD           ",
+	"N_VLANERR      ",
+	"N_N664ERR      ",
 };
 
 #define NUM_ETH_HIGH_LVL_COUNTERS2 4
 static char * eth_high_lvl_counters2 [NUM_ETH_HIGH_LVL_COUNTERS2] = {
-	"N_NOT_REACH",
-	"N_ERG_DISABLED",
-	"N_PART_DROP",
-	"N_QFULL",
+	"N_NOT_REACH    ",
+	"N_ERG_DISABLED ",
+	"N_PART_DROP    ",
+	"N_QFULL        ",
 };
 
 
