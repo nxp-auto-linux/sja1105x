@@ -664,11 +664,11 @@ static int sja1105_stats_show(struct seq_file *s, void *data)
 		seq_printf(s, "\nEthernet MAC-level status port%d\n", i);
 		val32 = sja1105_read_reg32(spi, SJA1105_REG_PORT_MAC_STATUS(i));
 		for (j=0; j<NUM_MAC_LVL_COUNTERS1; j++)
-			seq_printf(s, "port%d %s    = %u\n", i, mac_lvl_counters1[j], val32 & (0xFF << (j*8)));
+			seq_printf(s, "port%d %s    = %u\n", i, mac_lvl_counters1[j], (val32 >> (j*8)) & 0xFF);
 
 		val32 = sja1105_read_reg32(spi, SJA1105_REG_PORT_MAC_STATUS(i) + 1);
 		for (j=0; j<NUM_MAC_LVL_COUNTERS2; j++)
-			seq_printf(s, "port%d %s    = %u\n", i, mac_lvl_counters2[j], val32 & (1 << j));
+			seq_printf(s, "port%d %s    = %u\n", i, mac_lvl_counters2[j], (val32 >> j) & 1);
 	}
 
 	for (i=0; i<SJA1105_PORT_NB; i++) {
