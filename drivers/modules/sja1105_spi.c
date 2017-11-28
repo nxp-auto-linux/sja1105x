@@ -113,11 +113,12 @@ struct sja1105_context_data {
 	int switch_id;
 	struct list_head list;
 
-
 	struct notifier_block notifier_block;
 	struct net_device *ndev;
 	struct phy_device *phy_dev;
 	int last_link;
+
+	struct dentry *debug_dir_dentry;
 };
 
 /*
@@ -714,7 +715,16 @@ static void sja1105_debugfs_init(struct spi_device *spi)
 	if (!sja_dentry)
 		return;
 
+	data->debug_dir_dentry = sja_dentry;
+
 	debugfs_create_file("stats", S_IRUSR, sja_dentry, spi, &sja1105_fops);
+}
+
+static void sja1105_debugfs_remove(struct spi_device *spi)
+{
+	struct sja1105_context_data *data = spi_get_drvdata(spi);
+
+	debugfs_remove_recursive(data->debug_dir_dentry);
 }
 
 
@@ -1459,6 +1469,7 @@ static int sja1105_remove(struct spi_device *spi)
 	sja1105_registerSpiCB(NULL);
 //	unregister_netdevice_notifier(&data->notifier_block);
 	sja1105_sysfs_remove(&spi->dev);
+	sja1105_debugfs_remove(spi);
 
 	return 0;
 }
