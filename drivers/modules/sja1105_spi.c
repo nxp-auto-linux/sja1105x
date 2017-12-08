@@ -1027,60 +1027,67 @@ err_cfg:
 }
 
 
+static void sja1105_port_reset(struct sja1105_context_data *switch_ctx)
+{
+	struct spi_device *spi = switch_ctx->spi_dev;
+	u32 cfg_pad_mii_reg;
+	int i, j, max_retries = 5;
+
+	/*
+	 * Reset only ports 0 and 4 because the other ones are cascaded with
+	 * other switches
+	 */
+	for (i = 0; i < SJA1105_PORT_NB; i+=4) {
+		cfg_pad_mii_reg = sja1105_read_reg32(spi,
+					 SJA1105_CFG_PAD_MIIX_ID_PORT(i));
+
+		/* Toggle RX Clock PullDown and Bypass */
+		cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+		cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+
+		for (j = 0; j < max_retries; j++) {
+			sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
+
+			if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+								  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
+				dev_err(&spi->dev, "Failed to reset delay\n");
+				continue;
+			}
+			else {
+				break;
+			}
+		}
+
+		cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+		cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+
+		for (j = 0; j < max_retries; j++) {
+			sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
+
+			if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+								  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
+				dev_err(&spi->dev, "Failed to reset delay\n");
+				continue;
+			}
+			else {
+				break;
+			}
+		}
+	}
+}
+
+
 /* netdev event handler */
 static int sja1105_netdev_event(struct notifier_block *this, unsigned long event,
 							 void *ptr)
 {
 	struct sja1105_context_data *switch_ctx = container_of(this, struct sja1105_context_data, notifier_block);
 	struct spi_device *spi = switch_ctx->spi_dev;
-	int i, j, max_retries = 5;
-	u32 cfg_pad_mii_reg;
 
 	spi_set_drvdata(spi, switch_ctx);
 
 	if (event == NETDEV_CHANGE) {
-		for (i = 0; i < SJA1105_PORT_NB; i++) {
-			cfg_pad_mii_reg = sja1105_read_reg32(spi,
-						 SJA1105_CFG_PAD_MIIX_ID_PORT(i));
-
-			/* Toggle RX Clock PullDown and Bypass */
-			cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
-			cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
-
-			for (j = 0; j < max_retries; j++) {
-				sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
-
-				if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
-									  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
-					dev_err(&spi->dev, "Failed to reset delay\n");
-					continue;
-				}
-				else {
-					break;
-				}
-			}
-			if (j == max_retries)
-				return -EAGAIN;
-
-			cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
-			cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
-
-			for (j = 0; j < max_retries; j++) {
-				sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
-
-				if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
-									  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
-					dev_err(&spi->dev, "Failed to reset delay\n");
-					continue;
-				}
-				else {
-					break;
-				}
-			}
-			if (j == max_retries)
-				return -EAGAIN;
-
-		}
+		sja1105_port_reset(switch_ctx);
 	}
 	return NOTIFY_STOP;
 }
