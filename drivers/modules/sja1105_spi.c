@@ -1134,8 +1134,8 @@ int sja1105_init_dt(struct sja1105_context_data *switch_ctx)
 	struct device_node  *phy_node;
 
 	/* Register netdev notifier */
-	switch_ctx->notifier_block.notifier_call = sja1105_netdev_event;
-	register_netdevice_notifier(&switch_ctx->notifier_block);
+//	switch_ctx->notifier_block.notifier_call = sja1105_netdev_event;
+//	register_netdevice_notifier(&switch_ctx->notifier_block);
 
 	if (!np) {
 		if (verbosity > 2) dev_info(&switch_ctx->spi_dev->dev, "No OF node\n");
@@ -1451,7 +1451,7 @@ static int sja1105_remove(struct spi_device *spi)
 		wait_for_completion(&data->conf_loaded);
 
 	sja1105_registerSpiCB(NULL);
-	unregister_netdevice_notifier(&data->notifier_block);
+//	unregister_netdevice_notifier(&data->notifier_block);
 	sja1105_sysfs_remove(&spi->dev);
 
 	return 0;
