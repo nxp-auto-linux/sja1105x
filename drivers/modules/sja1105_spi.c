@@ -1031,53 +1031,59 @@ err_cfg:
 }
 
 
-static void sja1105_port_reset(struct sja1105_context_data *switch_ctx)
+static void sja1105_port_reset(struct sja1105_context_data *switch_ctx, int port_number)
 {
 	struct spi_device *spi = switch_ctx->spi_dev;
 	u32 cfg_pad_mii_reg;
-	int i, j, max_retries = 5;
+	int j, max_retries = 5;
 
-	/*
-	 * Reset only ports 0 and 4 because the other ones are cascaded with
-	 * other switches
-	 */
-	for (i = 0; i < SJA1105_PORT_NB; i+=4) {
-		cfg_pad_mii_reg = sja1105_read_reg32(spi,
-					 SJA1105_CFG_PAD_MIIX_ID_PORT(i));
+	cfg_pad_mii_reg = sja1105_read_reg32(spi,
+				 SJA1105_CFG_PAD_MIIX_ID_PORT(port_number));
 
-		/* Toggle RX Clock PullDown and Bypass */
-		cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
-		cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+	/* Toggle RX Clock PullDown and Bypass */
+	cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+	cfg_pad_mii_reg |= SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
 
-		for (j = 0; j < max_retries; j++) {
-			sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
+	for (j = 0; j < max_retries; j++) {
+		sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(port_number), cfg_pad_mii_reg);
 
-			if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
-								  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
-				dev_err(&spi->dev, "Failed to reset delay\n");
-				continue;
-			}
-			else {
-				break;
-			}
+		if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+							  SJA1105_CFG_PAD_MIIX_ID_PORT(port_number))) {
+			dev_err(&spi->dev, "Failed to reset delay\n");
+			continue;
 		}
-
-		cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
-		cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
-
-		for (j = 0; j < max_retries; j++) {
-			sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(i), cfg_pad_mii_reg);
-
-			if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
-								  SJA1105_CFG_PAD_MIIX_ID_PORT(i))) {
-				dev_err(&spi->dev, "Failed to reset delay\n");
-				continue;
-			}
-			else {
-				break;
-			}
+		else {
+			break;
 		}
 	}
+
+	cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_PD;
+	cfg_pad_mii_reg &= ~SJA1105_CFG_PAD_MIIX_ID_RXC_BYPASS;
+
+	for (j = 0; j < max_retries; j++) {
+		sja1105_write_reg32(spi, SJA1105_CFG_PAD_MIIX_ID_PORT(port_number), cfg_pad_mii_reg);
+
+		if (cfg_pad_mii_reg != sja1105_read_reg32(spi,
+							  SJA1105_CFG_PAD_MIIX_ID_PORT(port_number))) {
+			dev_err(&spi->dev, "Failed to reset delay\n");
+			continue;
+		}
+		else {
+			break;
+		}
+	}
+}
+
+
+static void sja1105_reset_ports(struct sja1105_context_data *switch_ctx)
+{
+	/*
+	 * Only ports 0 and 4 are directly connected to PHY or FEC. The other
+	 * ports are connected to another SJA1105, where the delay is already
+	 * applied on that side.
+	 */
+	sja1105_port_reset(switch_ctx, 0);
+	sja1105_port_reset(switch_ctx, 4);
 }
 
 
@@ -1091,7 +1097,7 @@ static int sja1105_netdev_event(struct notifier_block *this, unsigned long event
 	spi_set_drvdata(spi, switch_ctx);
 
 	if (event == NETDEV_CHANGE) {
-		sja1105_port_reset(switch_ctx);
+		sja1105_reset_ports(switch_ctx);
 	}
 	return NOTIFY_STOP;
 }
@@ -1115,7 +1121,7 @@ static void sja1105_enet_adjust_link(struct net_device *ndev)
 	if (sw_context->last_link == 0 &&
 	    phy_dev->link == 1) {
 		/* reset delay lines */
-		sja1105_port_reset(sw_context);
+		sja1105_reset_ports(sw_context);
 	}
 
 	sw_context->last_link = phy_dev->link;
