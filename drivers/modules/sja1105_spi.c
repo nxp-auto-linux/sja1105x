@@ -1,6 +1,6 @@
 /*
 * AVB switch driver module for SJA1105
-* Copyright (C) 2016-2017 NXP Semiconductors
+* Copyright 2016-2017 NXP
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -1119,6 +1119,11 @@ static void sja1105_enet_adjust_link(struct net_device *ndev)
 	struct sja1105_context_data *data, *sw_context;
 	int deviceSelect = 0;
 
+	if (phy_dev == NULL) {
+		sw_context->last_link = 0;
+		return;
+	}
+
 	read_lock(&rwlock);
 	list_for_each_entry(data, &switches_list, list) {
 		if(data->switch_id == deviceSelect){
@@ -1468,6 +1473,9 @@ static int sja1105_remove(struct spi_device *spi)
 
 	sja1105_registerSpiCB(NULL);
 //	unregister_netdevice_notifier(&data->notifier_block);
+	if (data->phy_dev) {
+		phy_disconnect(data->phy_dev);
+	}
 	sja1105_sysfs_remove(&spi->dev);
 	sja1105_debugfs_remove(spi);
 
