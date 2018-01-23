@@ -42,10 +42,7 @@
 #define BUFSIZE 20
 
 extern int verbosity;
-static long pending_register_read = -1;
-static long pending_reg_write_addr = -1;
-static unsigned long pending_reg_write_cont;
-static struct dentry *sja_dentry;
+static struct dentry *sja_dentry[SJA1105P_N_SWITCHES];
 
 static int sja1105_general_id_show(struct seq_file *s, void *data)
 {
@@ -154,18 +151,17 @@ static int sja1105_ethernet_mac_level_show(struct seq_file *s, void *data)
 {
 	struct sja1105_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
-	int device_select = ctx_data->device_select;
 	SJA1105P_macLevelErrors_t p_macLevelErrors;
 	int err, port;
 
 	for (port=0; port<SJA1105P_N_LOGICAL_PORTS; port++) {
 		err = SJA1105P_getMacErrors(&p_macLevelErrors, port);
 		if (err) {
-			dev_err(&spi->dev, "Error: Could not get ethernet mac level status for switch id %d, port %d (err=%d)\n", device_select, port, err);
+			dev_err(&spi->dev, "Error: Could not get ethernet mac level status for logical port %d (err=%d)\n", port, err);
 			return err;
 		}
 
-		seq_printf(s, "\nEthernet MAC-level status switch %d port %d\n", device_select, port);
+		seq_printf(s, "\nEthernet MAC-level status logical port %d\n", port);
 
 		seq_printf(s, "nRunt      = %u\n", p_macLevelErrors.nRunt);
 		seq_printf(s, "nSoferr    = %u\n", p_macLevelErrors.nSoferr);
@@ -180,7 +176,6 @@ static int sja1105_ethernet_high_level_show(struct seq_file *s, void *data)
 {
 	struct sja1105_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
-	int device_select = ctx_data->device_select;
 	uint64_t tx_bytes, tx_packets, rx_bytes, rx_packets;
 	uint32_t rx_crc_errors, rx_length_errors, polerr, vlanerr, n664err;
 	uint32_t not_reach, egr_disabled, part_drop, qfull;
@@ -229,11 +224,11 @@ static int sja1105_ethernet_high_level_show(struct seq_file *s, void *data)
 							&n664err, port,
 							SJA1105P_e_etherStatDirection_BOTH);
 		if (err) {
-			dev_err(&spi->dev, "Error: Could not get ethernet high level status for switch id %d, port %d (err=%d)\n", device_select, port, err);
+			dev_err(&spi->dev, "Error: Could not get ethernet high level status for logical port %d (err=%d)\n", port, err);
 			return err;
 		}
 
-		seq_printf(s, "\nEthernet High-level status switch %d port %d\n", device_select, port);
+		seq_printf(s, "\nEthernet High-level status logical port %d\n", port);
 
 		seq_printf(s, "tx_bytes         = %llu\n", tx_bytes);
 		seq_printf(s, "tx_packets       = %llu\n", tx_packets);
@@ -254,20 +249,20 @@ static int sja1105_ethernet_high_level_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static int sja1105_register_rw_write(struct file* file, const char __user* user_buf, size_t size, loff_t* pos)
+static ssize_t sja1105_register_rw_write(struct file* file, const char __user* user_buf, size_t size, loff_t* pos)
 {
 	int ret;
-	long reg_addr;
-	unsigned long reg_content;
+	unsigned long reg_addr, reg_content;
 	char buf[BUFSIZE];
 	char operation;
+	struct sja1105_context_data *ctx_data = file->f_inode->i_private;
+	struct spi_device *spi = ctx_data->spi_dev;
 
 	/* get buffer from userspace */
 	if (copy_from_user(buf, user_buf, size < BUFSIZE ? size : BUFSIZE))
 		goto error;
 
 	ret = sscanf(buf, "%c:%lx:%lx", &operation, &reg_addr, &reg_content);
-
 	if (ret < 2)
 		goto error;
 
@@ -278,54 +273,34 @@ static int sja1105_register_rw_write(struct file* file, const char __user* user_
 
 	switch (operation) {
 	case 'r':
-		pending_register_read = reg_addr;
-		if (verbosity > 1)
-			pr_alert("Marking register %lx as pending, read this file to get its content\n", reg_addr);
-
+		/* get content of register */
+		reg_content = sja1105_read_reg32(spi, reg_addr);
+		pr_alert("Content of register %lx: [%08lx]\n", reg_addr, reg_content);
 		break;
 	case 'w':
-		pending_reg_write_addr = reg_addr;
-		pending_reg_write_cont = reg_content;
-		if (verbosity > 1)
-			pr_alert("Marking write of %08lx to register %lx as pending, read this file to execute write\n", pending_reg_write_cont, reg_addr);
-
+		/* write to register */
+		ret = sja1105_cfg_block_write(spi, reg_addr, (u32*)&reg_content, 1);
+		if (!ret)
+			pr_alert("Wrote %08lx to register %lx\n", reg_content, reg_addr);
+		else
+			pr_alert("Error writing to register %lx\n", reg_addr);
 		break;
 	default:
+		pr_err("Invalid operator\n");
 		break;
 	}
 
+	return size;
 
 error:
+	pr_err("Invalid command\n");
 	return size;
 }
 
 static int sja1105_register_rw_show(struct seq_file *s, void *data)
 {
-	struct sja1105_context_data *ctx_data = s->private;
-	struct spi_device *spi = ctx_data->spi_dev;
-	long reg_content;
-
-	if (pending_register_read != -1) {
-		/* get content of register, if there is a read pending */
-		reg_content = sja1105_read_reg32(spi, pending_register_read);
-		seq_printf(s, "Content of register %lx: [%08lx]\n", pending_register_read, reg_content);
-
-		/* no read pending anymore */
-		pending_register_read = -1;
-	} else if (pending_reg_write_addr != -1) {
-		/* write to register, if there is a write pending */
-		if (sja1105_cfg_block_write(spi, pending_reg_write_addr, (u32*)&pending_reg_write_cont, 1) == 0)
-			seq_printf(s, "Wrote %08lx to register %lx\n", pending_reg_write_cont, pending_reg_write_addr);
-		else
-			seq_printf(s, "Error writing to register %lx\n", pending_reg_write_addr);
-
-		/* no write pending anymore */
-		pending_reg_write_addr = -1;
-	} else {
-		seq_printf(s, "READ A REGISTER: write \"r:REG_ADDR\" to this file, where REG_ADDR is hexadecimal\n");
-		seq_printf(s, "WRITE A REGISTER: write \"w:REG_ADDR:REG_CONTENT\" to this file, where REG_ADDR and REG_CONTENT are hexadecimal\n");
-		seq_printf(s, "Afterwards read this file again to execute desired operation\n");
-	}
+	seq_printf(s, "Read a register: write \"r:REG_ADDR\" to this file, where REG_ADDR is hexadecimal\n");
+	seq_printf(s, "Write a register: write \"w:REG_ADDR:REG_CONTENT\" to this file, where REG_ADDR and REG_CONTENT are hexadecimal\n");
 
 	return 0;
 }
@@ -406,13 +381,18 @@ static const struct file_operations sja1105_register_rw = {
 
 void sja1105_debugfs_init(struct sja1105_context_data *ctx_data)
 {
+	int device_select;
+	char dentry_name[12];
 	struct dentry *general_dentry, *ethernet_dentry;
 
-	sja_dentry = debugfs_create_dir("sja1105", NULL);
-	if (!sja_dentry)
+	device_select = ctx_data->device_select;
+	scnprintf(dentry_name, 12, "sja1105-%d", device_select);
+
+	sja_dentry[device_select] = debugfs_create_dir(dentry_name, NULL);
+	if (!sja_dentry[device_select])
 		return;
 
-	general_dentry = debugfs_create_dir("general", sja_dentry);
+	general_dentry = debugfs_create_dir("general", sja_dentry[device_select]);
 	if (!general_dentry)
 		return;
 
@@ -421,7 +401,7 @@ void sja1105_debugfs_init(struct sja1105_context_data *ctx_data)
 	debugfs_create_file("registers", S_IRUSR, general_dentry, ctx_data, &sja1105_general_registers_fops);
 	debugfs_create_file("register_rw", S_IRUSR, general_dentry, ctx_data, &sja1105_register_rw);
 
-	ethernet_dentry = debugfs_create_dir("ethernet", sja_dentry);
+	ethernet_dentry = debugfs_create_dir("ethernet", sja_dentry[device_select]);
 	if (!ethernet_dentry)
 		return;
 
@@ -429,7 +409,8 @@ void sja1105_debugfs_init(struct sja1105_context_data *ctx_data)
 	debugfs_create_file("high-level", S_IRUSR, ethernet_dentry, ctx_data, &sja1105_ethernet_high_level_fops);
 }
 
-void sja1105_debugfs_remove()
+void sja1105_debugfs_remove(struct sja1105_context_data *ctx_data)
 {
-	debugfs_remove_recursive(sja_dentry);
+	debugfs_remove_recursive(sja_dentry[ctx_data->device_select]);
+	sja_dentry[ctx_data->device_select] = NULL;
 }

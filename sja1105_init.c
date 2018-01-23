@@ -65,7 +65,7 @@
  * Static variables
  *
  */
-static int max_hz = 25000000; /* 25 MHz is the default but might have to be reduced */
+static int max_hz = SPI_FREQUENCY; /* 25 MHz is the default but might have to be reduced */
 module_param(max_hz, int, S_IRUGO);
 MODULE_PARM_DESC(max_hz, "SPI bus speed may be limited for the remote SJA1105 application board, 25MHz is the maximum");
 
@@ -91,6 +91,7 @@ static DEFINE_RWLOCK(rwlock);
 static int switches_active;
 bool do_auto_mapping = false;
 SJA1105P_port_t portMapping[SJA1105P_N_LOGICAL_PORTS];
+struct sja1105_context_data *sja1105_cotext_arr[SJA1105P_N_SWITCHES];
 
 
 #define NUM_DT_ENTRIES 2
@@ -122,22 +123,24 @@ struct _SJA_CONF sja_cfg;
 
 static int sja1105_check_device_id(struct spi_device *spi, unsigned int device_select, bool dump_id)
 {
-	int ret = -1;
+	int val = -1;
 	int i;
 	u32 devid;
 
-	ret = sja_get_device_id(&devid, device_select);
-	if (!ret) {
+	if (!sja_get_device_id(&devid, device_select)) {
 		for (i = 0; i < SJA1105_NB_REV; i++) {
 			if (devid == device_id_list[i]) {
-				ret = i;
+				val = i;
 				if (dump_id) dev_info(&spi->dev, "Detected Device ID %08x (%s)\n", devid, fw_name_suffix[i]);
 				break;
 			}
 		}
 	}
 
-	return ret;
+	if (val == -1)
+		dev_err(&spi->dev, "SJA1105 invalid Device Id, is %08x\n", devid);
+
+	return val;
 }
 
 static bool sja1105_check_device_status(struct spi_device *spi)
@@ -361,7 +364,8 @@ static int sja1105_configuration_load(const struct firmware *config_file, struct
 
 	i = 0;
 	while (remaining_words > 0) {
-		int block_size_words = MIN(6/*SJA1105_CONFIG_WORDS_PER_BLOCK*/, remaining_words);
+		//TODO: should use SJA1105_CONFIG_WORDS_PER_BLOCK many words per transfer
+		int block_size_words = MIN(SPI_CFG_BLOCKS, remaining_words);
 
 		if (verbosity > 2) dev_info(&spi->dev, "block_size_words %d remaining_words %d\n", block_size_words, remaining_words);
 
@@ -493,6 +497,14 @@ void sja1105_port_mapping(struct sja1105_context_data *switch_ctx)
 			/* if value is is invalid, ie no DT node was found, fall back to auto mapping */
 			do_auto_mapping = true;
 			break;
+		} else if (lport >= SJA1105P_N_LOGICAL_PORTS) {
+			/* 0xff indicates that port is cascaded,
+			 * (does not have a logical port number).
+			 * All other values are invalid
+			 */
+			if (lport != 0xff)
+				dev_err(&switch_ctx->spi_dev->dev, "logical port number must be less than %d, or 0xff to indicate cascaded port (is %d)\n", SJA1105P_N_LOGICAL_PORTS, lport);
+			continue;
 		}
 
 		if (verbosity > 0) dev_info(&switch_ctx->spi_dev->dev, "physical-port-%d: logical-port-%d, switch-%d\n", pport, lport, switch_ctx->device_select);
@@ -512,17 +524,19 @@ int sja1105_probe_final(struct sja1105_context_data *switch_ctx)
 		read_unlock(&rwlock);
 	}
 
-	if (do_auto_mapping) {
-		if (verbosity > 0) dev_info(&switch_ctx->spi_dev->dev, "DTS does not contain complete port mapping, falling back to AutoPortMapping\n");
-		SJA1105P_initAutoPortMapping();
-	} else {
-		SJA1105P_initManualPortMapping(portMapping);
-	}
-
 	err = SJA1105P_synchSwitchConfiguration();
 	if (err) {
 		dev_err(&switch_ctx->spi_dev->dev, "SJA1105 config sync failed\n");
 		return err;
+	}
+
+	if (do_auto_mapping) {
+		if (verbosity > 0) dev_info(&switch_ctx->spi_dev->dev, "DTS does not contain complete port mapping, falling back to AutoPortMapping\n");
+		SJA1105P_initAutoPortMapping();
+	} else {
+		err = SJA1105P_initManualPortMapping(portMapping);
+		if (err)
+			dev_err(&switch_ctx->spi_dev->dev, "SJA1105P_initManualPortMapping failed (err=%d)\n", err);
 	}
 
 	/* perform autoconfiguration for each port */
@@ -532,14 +546,15 @@ int sja1105_probe_final(struct sja1105_context_data *switch_ctx)
 		return err;
 	}
 
-	/* TODO only last switch has dbgfs */
-	sja1105_debugfs_init(switch_ctx);
-
 	if (verbosity > 0) {
 		read_lock(&rwlock);
 		dev_info(&switch_ctx->spi_dev->dev, "%d switch%s initialized successfully!\n", switches_active, (switches_active > 1)?"es":"");
 		read_unlock(&rwlock);
 	}
+
+	/* only init switchdev, if all switches were detected and initialized correctly */
+	if (enable_switchdev)
+		nxp_swdev_init(sja1105_cotext_arr);
 
 	return 0;
 }
@@ -559,19 +574,22 @@ static int sja1105_probe(struct spi_device *spi)
 		dev_err(&spi->dev, "Memory allocation for sja1105_context_data failed\n");
 		return -ENOMEM;
 	}
+
 	read_lock(&rwlock);
 	switch_ctx->device_select = switches_active;
 	if (verbosity > 0) dev_info(&spi->dev, "Probing switch number %d\n", switch_ctx->device_select);
 	read_unlock(&rwlock);
 
+	sja1105_cotext_arr[switch_ctx->device_select] = switch_ctx;
+
 	switch_ctx->spi_dev = spi;
 	/* SCLK held low between frames Data latched on second clock edge
 	i.e: CPOL=0-CPHA=1 alias MODE 1*/
 	spi->mode = SPI_MODE_1;
-	spi->bits_per_word = 32;
+	spi->bits_per_word = SPI_BITS_PER_WORD;
 	spi->max_speed_hz = max_hz;
 
-	if (verbosity > 1) dev_info(&spi->dev, "SJA1105 SPI Clock set to %dHz\n", max_hz);
+	if (verbosity > 1) dev_info(&spi->dev, "SJA1105 SPI Clock set to %dHz, bits per word set to %d\n", max_hz, SPI_BITS_PER_WORD);
 
 	err = spi_setup(spi);
 	if (err < 0) {
@@ -590,9 +608,9 @@ static int sja1105_probe(struct spi_device *spi)
 		dev_err(&spi->dev, "SJA1105 error no matching DTS node was found\n");
 		return -ENODEV;
 	}
-	if (verbosity > 1) dev_info(&spi->dev, "Found a matching DT entry (number %d)\n", (int)match->data);
+	if (verbosity > 1) dev_info(&spi->dev, "Found a matching DT entry (type %llu)\n", (uint64_t)match->data);
 
-	fw_idx = (int) match->data;
+	fw_idx = (uint64_t)match->data;
 	if (fw_idx < 0 || fw_idx >= NUM_DT_ENTRIES) {
 		dev_err(&spi->dev, "SJA1105 Bad device table contents\n");
 		return -EINVAL;
@@ -611,7 +629,7 @@ static int sja1105_probe(struct spi_device *spi)
 
 	switch_ctx->sja1105_chip_revision = sja1105_check_device_id(spi, switch_ctx->device_select, 1);
 	if (switch_ctx->sja1105_chip_revision < 0 ) {
-		dev_err(&spi->dev, "SJA1105 SPI Failed to read Device Id, is %d\n", switch_ctx->sja1105_chip_revision);
+		dev_err(&spi->dev, "SJA1105 SPI Failed to read Device Id\n");
 		return -ENODEV;
 	} else if (switch_ctx->sja1105_chip_revision >  SJA1105_NB_REV) {
 		dev_err(&spi->dev, "SJA1105 SPI unsupported version\n");
@@ -645,6 +663,8 @@ static int sja1105_probe(struct spi_device *spi)
 
 	sja1105_port_mapping(switch_ctx);
 
+	sja1105_debugfs_init(switch_ctx);
+
 	/* Keep track of the total number of switches that were probed */
 	write_lock(&rwlock);
 	switches_active++;
@@ -672,7 +692,7 @@ static int sja1105_remove(struct spi_device *spi)
 	unregister_spi_callback(switches_active);
 	read_unlock(&rwlock);
 
-	sja1105_debugfs_remove();
+	sja1105_debugfs_remove(spi_get_drvdata(spi));
 
 	return 0;
 }
@@ -692,15 +712,7 @@ static struct spi_driver sja1105_driver = {
 
 static int __init sja1105_driver_init(void)
 {
-	int err =  spi_register_driver( &sja1105_driver );
-	if (err)
-		return err;
-
-	if (enable_switchdev) {
-		nxp_swdev_init();
-	}
-
-	return 0;
+	return spi_register_driver( &sja1105_driver );
 }
 module_init(sja1105_driver_init);
 

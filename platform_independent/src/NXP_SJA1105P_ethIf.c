@@ -263,7 +263,6 @@ extern void SJA1105P_registerFrameRecvCB(SJA1105P_recvFrame_cb_t pf_recvFrame_cb
 extern uint8_t SJA1105P_forwardRecvFrames(void)
 {
 	uint8_t ret = 1;
-	uint8_t i;
 	uint16_t len;
 	uint8_t *p_frameBuf = NULL;
 	SJA1105P_frameDescriptor_t *p_recvFrameDescriptor = NULL;
@@ -949,9 +948,6 @@ static uint8_t forwardTrappedFrame(const metaData_t *kp_metaData, trapInformatio
 {
 	uint8_t ret = 0;
 	uint8_t i;
-	uint32_t timestampCorrection;
-	SJA1105P_portStatusMiixArgument_t portStatus;
-	uint16_t speed;  /* [Gbps] speed of the port */
 
 	if (p_trapInformation->inclSrcPort == 1U)
 	{  /* The DST MAC has to be corrected */

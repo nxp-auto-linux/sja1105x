@@ -22,13 +22,12 @@
 #include <net/netlink.h>
 #include <linux/of_mdio.h>
 
-#include "sja1105p_switchdev.h"
-
 #include "NXP_SJA1105P_addressResolutionTable.h"
 #include "NXP_SJA1105P_diagnostics.h"
 #include "NXP_SJA1105P_vlan.h"
 #include "NXP_SJA1105P_config.h"
 
+#include "sja1105p_switchdev.h"
 
 #define PRODUCT_NAME "SJA1105P"
 #define PNAME_LEN 22U
@@ -36,6 +35,7 @@
 #define DTS_NAME_LEN 8U
 
 extern int verbosity;
+struct sja1105_context_data **sja1105_context_arr;
 
 /* struct declarations */
 struct nxp_port_data_struct {
@@ -271,6 +271,8 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 		}
 
 		mac_addr = kzalloc(17*sizeof(char), GFP_KERNEL);
+		if (!mac_addr)
+			return -ENOMEM;
 
 		vid = entry.vlanId;
 		ether_addr_copy(mac_addr, (char*)&entry.dstMacAddress);
@@ -281,6 +283,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 
 		/* send data via netlink message */
 		err = nxp_send_netlink_msg(nxp_port, skb, cb, vid, mac_addr);
+		kfree(mac_addr);
 		if (err)
 			goto send_error;
 
@@ -711,7 +714,7 @@ static const struct swdev_ops nxp_port_swdev_ops = {
  */
 struct device_node *get_dt_node_for_port(int lport)
 {
-	struct device_node *switch_dt_node;
+	struct device_node *switch_dt_node = NULL;
 	struct device_node *port_dt_node;
 
 	char phy_dts_name[DTS_NAME_LEN];
@@ -724,7 +727,8 @@ struct device_node *get_dt_node_for_port(int lport)
 		goto mapping_error;
 
 	/* get the DT node of the SJA1105p */
-	switch_dt_node = of_find_node_by_name(NULL, "sja1105p");
+	if (sja1105_context_arr)
+		switch_dt_node = sja1105_context_arr[pport.switchId]->of_node;
 	if (!switch_dt_node)
 		goto node_not_found;
 
@@ -825,21 +829,23 @@ phydev_attach_error:
 
 int is_hostport(int lport)
 {
-	uint32_t *prop;
-	struct device_node *port_dt_node;
+	int err;
+	SJA1105P_port_t pport;
+	struct sja1105_context_data *sw_ctx;
 
-	port_dt_node = get_dt_node_for_port(lport);
-	if (!port_dt_node)
-		goto error;
+	err = SJA1105P_getPhysicalPort(lport, &pport);
+	if (err)
+		goto mapping_error;
 
-	prop = (uint32_t*) of_get_property(port_dt_node, "is-host", NULL);
+	sw_ctx = sja1105_context_arr[pport.switchId];
 
-	/* decrement refcount, was incremented by get_dt_node_for_port */
-	of_node_put(port_dt_node);
+	if (verbosity > 0)
+		pr_alert("lport %d belongs to sw %d, pport %d: is host: %d\n", lport, pport.switchId, pport.physicalPort, sw_ctx->pdata->ports[pport.physicalPort].is_host);
 
-	return be32_to_cpu(*prop);
+	return sw_ctx->pdata->ports[pport.physicalPort].is_host;
 
-error:
+mapping_error:
+	dev_err(&nxp_private_data.ports[lport]->netdev->dev, "SJA1105P_getPhysicalPort returned an error \n");
 	return 0;
 }
 
@@ -858,7 +864,6 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 	/* create SJA1105P_N_LOGICAL_PORTS new net devices */
 	for(port=0; port<SJA1105P_N_LOGICAL_PORTS; port++) {
 		char *port_name;
-		unsigned char addr[] = {0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55};
 		struct net_device *netdev;
 		struct nxp_port_data_struct *nxp_port;
 		SJA1105P_port_t physicalPortInfo;
@@ -886,19 +891,14 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 
 		/* give dev a meaningful name */
 		port_name = kzalloc(sizeof(char) * PNAME_LEN, GFP_KERNEL);
+		if (!port_name)
+			goto allocation_error;
 		scnprintf(port_name, PNAME_LEN, "%s_p%d%s", PRODUCT_NAME, port, nxp_port->is_host?"*":"");
 		err = dev_alloc_name(netdev, port_name);
 		if (err)
 			goto allocation_error;
 
-		/* setup mac addr */ //TODO set correct MACs
-		nxp_port->base_mac = kzalloc(17*sizeof(char), GFP_KERNEL);
-
-		if (!is_valid_ether_addr(addr))
-			pr_alert("Netdev %s has an invalid MAC\n", netdev->name);
-
-		ether_addr_copy(nxp_port->base_mac, addr);
-		ether_addr_copy(netdev->dev_addr, addr);
+		//TODO setup MAC address
 
 		/* populate netdev */
 		netdev->netdev_ops = &nxp_port_netdev_ops;
@@ -916,6 +916,8 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 		netdev->features |= NETIF_F_NETNS_LOCAL |
 				    NETIF_F_HW_SWITCH_OFFLOAD |
 				    NETIF_F_VLAN_FEATURES;
+
+		//TODO set priv_flags
 
 		/* bind a phydev to the netdev */
 		attach_phydev(netdev);
@@ -955,6 +957,9 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 {
 	int i;
 
+	if (!pr_data->ports)
+		return;
+
 	for(i=0; i<SJA1105P_N_LOGICAL_PORTS; i++) {
 		struct net_device *netdev = pr_data->ports[i]->netdev;
 		if (!netdev)
@@ -980,8 +985,9 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 }
 
 /* module init function */
-int nxp_swdev_init(void)
+int nxp_swdev_init(struct sja1105_context_data **ctx_nodes)
 {
+	sja1105_context_arr = ctx_nodes;
 	return register_ports(&nxp_private_data);
 }
 

@@ -17,7 +17,12 @@
 #ifndef _NXP_SJA1105_H
 #define _NXP_SJA1105_H
 
-int nxp_swdev_init(void);
+#include <linux/spi/spi.h>
+
+#include "sja1105_cfg_file.h"
+#include "sja1105_init.h"
+
+int nxp_swdev_init(struct sja1105_context_data **ctx_nodes);
 void nxp_swdev_exit(void);
 
 

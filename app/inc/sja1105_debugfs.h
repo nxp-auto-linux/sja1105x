@@ -33,6 +33,6 @@
 #include "sja1105_init.h"
 
 void sja1105_debugfs_init(struct sja1105_context_data *ctx_data);
-void sja1105_debugfs_remove(void);
+void sja1105_debugfs_remove(struct sja1105_context_data *ctx_data);
 
 #endif /* _SJA1105_DEBUGFS_H__ */
