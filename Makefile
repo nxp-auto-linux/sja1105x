@@ -52,11 +52,23 @@ else
         $(error Unsupported platform specified!)
 endif
 
-all:
+FIRMWARE_DIR="tools/firmware_generation"
+
+.PHONY: all modules clean firmware firmware_clean
+
+all: modules firmware
+
+modules:
 	$(MAKE) ARCH=$(MYARCHITECTURE) CROSS_COMPILE=$(MYTOOLCHAIN) CC=$(MYCOMPILER) -C $(KERNELDIR) M=`pwd` modules
 
-clean:
+clean: firmware_clean
 	$(MAKE) ARCH=$(MYARCHITECTURE) CROSS_COMPILE=$(MYTOOLCHAIN) CC=$(MYCOMPILER) -C $(KERNELDIR) M=`pwd` $@
+
+firmware:
+	$(MAKE) -C $(FIRMWARE_DIR) BOARD=$(MYPLATFORM) NR_SWITCHES=$(NUMBER_SWITCHES)
+
+firmware_clean:
+	$(MAKE) -C $(FIRMWARE_DIR) clean
 
 
 obj-m +=  sja1105pqrs.o
