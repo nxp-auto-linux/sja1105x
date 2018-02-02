@@ -715,7 +715,7 @@ static void nxp_toggle_port(int port_num)
 	SJA1105P_getPortStatusMiix(&portStatus, physicalPort.physicalPort,
 				   physicalPort.switchId);
 
-	if (portStatus.xmiiMode == SJA1105P_e_xmiiMode_RGMII) {
+	if (portStatus.speed == SJA1105P_e_speed_1_GBPS) {
 		SJA1105P_resetClockDelay(physicalPort.physicalPort,
 					 physicalPort.switchId,
 					 SJA1105P_e_direction_RX);
