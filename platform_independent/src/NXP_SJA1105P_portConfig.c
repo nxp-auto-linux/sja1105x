@@ -373,6 +373,8 @@ static uint8_t configPort(uint8_t port, uint8_t switchId,  SJA1105P_speed_t spee
 				}
 				ret += SJA1105P_setIdivCControlRegister(&idivCControlRegister, port, switchId);
 			}
+			if (speed == SJA1105P_e_speed_100_MBPS)
+				miixClockControlRegister.autoblock = 0;
 			ret += SJA1105P_setMiixClockControlRegister(&miixClockControlRegister, port, SJA1105P_e_miixInternalClk_RGMII_TX_CLK, switchId);
 			break;
 		}
