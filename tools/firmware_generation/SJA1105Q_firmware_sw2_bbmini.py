@@ -90,7 +90,7 @@ general_parameters.append({
     "INCL_SRCPT[1]"          : 0,
     "SEND_META[0]"           : 0,
     "SEND_META[1]"           : 0,
-    "CASC_PORT"              : 6,
+    "CASC_PORT"              : 0,
     "MIRR_PORT"              : 6,                   # No default mirror port. Set through reconfiguration
     "HOST_PORT"              : 0,
     "VIMARKER"               : 0xFFFFFFFF,
