@@ -14,16 +14,16 @@
  *
  */
 
-#ifndef _NXP_SJA1105_H
-#define _NXP_SJA1105_H
+#ifndef _NXP_SJA1105P_H
+#define _NXP_SJA1105P_H
 
 #include <linux/spi/spi.h>
 
-#include "sja1105_cfg_file.h"
-#include "sja1105_init.h"
+#include "sja1105p_cfg_file.h"
+#include "sja1105p_init.h"
 
-int nxp_swdev_init(struct sja1105_context_data **ctx_nodes);
+int nxp_swdev_init(struct sja1105p_context_data **ctx_nodes);
 void nxp_swdev_exit(void);
 
 
-#endif /* _NXP_SJA1105_H */
+#endif /* _NXP_SJA1105P_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 NXP
+ * Copyright 2017 - 2018 NXP
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -26,6 +26,7 @@
 #include "NXP_SJA1105P_diagnostics.h"
 #include "NXP_SJA1105P_vlan.h"
 #include "NXP_SJA1105P_config.h"
+#include "NXP_SJA1105P_portConfig.h"
 
 #include "sja1105p_switchdev.h"
 
@@ -35,7 +36,8 @@
 #define DTS_NAME_LEN 8U
 
 extern int verbosity;
-struct sja1105_context_data **sja1105_context_arr;
+static struct sja1105p_context_data **sja1105p_context_arr;
+typedef enum {UP, DOWN} linkstatus_t;
 
 /* struct declarations */
 struct nxp_port_data_struct {
@@ -71,7 +73,7 @@ static int nxp_port_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 	memset(&entry, 0, sizeof(SJA1105P_addressResolutionTableEntry_t));
 
 	if (verbosity > 1)
-		pr_alert("nxp_port_fdb_add was called [%d]! Add [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] to device [%s], flags [%x]\n",
+		netdev_alert(netdev, "nxp_port_fdb_add was called [%d]! Add [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] to device [%s], flags [%x]\n",
 		nxp_port->port_num, *(addr+0), *(addr+1), *(addr+2), *(addr+3), *(addr+4), *(addr+5), vid, netdev->name, nlm_flags);
 
 	/* in case there already exists an entry corresponding to the MAC addr,
@@ -80,7 +82,7 @@ static int nxp_port_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 	memcpy (&entry.dstMacAddress, addr, sizeof (entry.dstMacAddress));
 	err = SJA1105P_readArlTableEntryByAddress(&entry);
 	if (err)
-		pr_alert("No existing entry found, creating new one\n");
+		netdev_alert(netdev, "No existing entry found, creating new one\n");
 
 	/* build table entry,
 	 * the index and enabled fields are filled
@@ -89,15 +91,15 @@ static int nxp_port_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 	entry.ports |= (1 << nxp_port->port_num);
 	entry.vlanId = vid;
 
-	/* add to sw using function from the sja1105 driver module */
+	/* add to sw using function from the sja1105p driver module */
 	err = SJA1105P_addArlTableEntry(&entry);
 	if(err)
-		goto sja1105_write_error;
+		goto sja1105p_write_error;
 
 	return 0;
 
-sja1105_write_error:
-	dev_err(&netdev->dev, "Could not add entry to arl table of sja1105!");
+sja1105p_write_error:
+	netdev_err(netdev, "Could not add entry to arl table of sja1105p!");
 	return err;
 }
 
@@ -114,13 +116,13 @@ static int nxp_port_fdb_del(struct ndmsg *ndm, struct nlattr *tb[],
 	memset(&entry, 0, sizeof(SJA1105P_addressResolutionTableEntry_t));
 
 	if (verbosity > 1)
-		pr_alert("nxp_port_fdb_del was called [%d]! Del [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] from device [%s]\n",
+		netdev_alert(netdev, "nxp_port_fdb_del was called [%d]! Del [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] from device [%s]\n",
 		nxp_port->port_num, *(addr+0), *(addr+1), *(addr+2), *(addr+3), *(addr+4), *(addr+5), vid, netdev->name);
 
 	memcpy (&entry.dstMacAddress, addr, sizeof (entry.dstMacAddress));
 	err = SJA1105P_readArlTableEntryByAddress(&entry);
 	if (err)
-		goto sja1105_entry_not_found;
+		goto sja1105p_entry_not_found;
 
 	/* disable current port */
 	entry.ports &= ~(1 << nxp_port->port_num);
@@ -131,14 +133,14 @@ static int nxp_port_fdb_del(struct ndmsg *ndm, struct nlattr *tb[],
 	 */
 	if (entry.ports) {
 		if (verbosity > 1)
-			pr_alert("deactivated port, upload modified entry\n");
+			netdev_alert(netdev, "deactivated port, upload modified entry\n");
 
 		err = SJA1105P_addArlTableEntry(&entry);
 		if(err)
-			goto sja1105_write_error;
+			goto sja1105p_write_error;
 	} else {
 		if (verbosity > 1)
-			pr_alert("deactivated last port, also remove table entry\n");
+			netdev_alert(netdev, "deactivated last port, also remove table entry\n");
 
 		/* build table entry,
 		 * entry to be removed is identified by MAC and vid,
@@ -146,22 +148,22 @@ static int nxp_port_fdb_del(struct ndmsg *ndm, struct nlattr *tb[],
 		 */
 		entry.vlanId = vid;
 
-		/* del from sw using function from the sja1105 driver module */
+		/* del from sw using function from the sja1105p driver module */
 		err = SJA1105P_removeArlTableEntryByAddress(&entry);
 		if(err) {
-			dev_err(&netdev->dev, "Could not delete entry!");
+			netdev_err(netdev, "Could not delete entry!");
 			return err;
 		}
 	}
 
 	return 0;
 
-sja1105_entry_not_found:
-	dev_err(&netdev->dev, "Entry does not exist!");
+sja1105p_entry_not_found:
+	netdev_err(netdev, "Entry does not exist!");
 	return err;
 
-sja1105_write_error:
-	dev_err(&netdev->dev, "Could not add entry to arl table of sja1105!");
+sja1105p_write_error:
+	netdev_err(netdev, "Could not add entry to arl table of sja1105p!");
 	return err;
 }
 
@@ -239,7 +241,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 	nxp_port = netdev_priv(netdev);
 
 	if (verbosity > 1)
-		pr_alert("nxp_port_fdb_dump was called (%d)! idx [%d], arg is [%ld]%s\n",
+		netdev_alert(netdev, "nxp_port_fdb_dump was called (%d)! idx [%d], arg is [%ld]%s\n",
 		nxp_port->port_num, idx, cb->args[0], ((idx < cb->args[0])?" (skipping)":""));
 
 	for (index = 0; index < ARL_TABLE_SIZE; index++) {
@@ -249,7 +251,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 		/* get table entry at position index from arl table */
 		err = SJA1105P_readArlTableEntryByIndex(&entry);
 		if (err)
-			goto sja1105_read_error;
+			goto sja1105p_read_error;
 
 		/* skip without incrementing idx if entry is not valid (empty)
 		 * or belongs to a different port
@@ -278,7 +280,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 		ether_addr_copy(mac_addr, (char*)&entry.dstMacAddress);
 
 		if (verbosity > 1)
-			pr_alert("discovered [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] on device [%s]\n",
+			netdev_alert(netdev, "discovered [%02x:%02x:%02x:%02x:%02x:%02x] in vlan [%x] on device [%s]\n",
 			*(mac_addr+0), *(mac_addr+1), *(mac_addr+2), *(mac_addr+3), *(mac_addr+4), *(mac_addr+5), vid, netdev->name);
 
 		/* send data via netlink message */
@@ -292,12 +294,12 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 
 	return idx;
 
-sja1105_read_error:
-	dev_err(&netdev->dev, "Could not read table entry from sja1105!\n");
+sja1105p_read_error:
+	netdev_err(netdev, "Could not read table entry from sja1105p!\n");
 	return err;
 
 send_error:
-	dev_err(&netdev->dev, "nla put faillure, could not send netlink msg\n");
+	netdev_err(netdev, "nla put faillure, could not send netlink msg\n");
 	return err;
 }
 
@@ -311,11 +313,39 @@ static int nxp_port_get_phys_port_name(struct net_device *netdev,
 		return -EINVAL;
 
 	if (verbosity > 3) {
-		pr_alert("nxp_port_get_phys_port_name was called for [%d], name is [%s]\n",
+		netdev_alert(netdev, "nxp_port_get_phys_port_name was called for [%d], name is [%s]\n",
 		nxp_port->port_num, buf);
 	}
 
 	return 0;
+}
+
+static void set_port_linkstatus(struct net_device *netdev, linkstatus_t s)
+{
+	int needlock, flags;
+
+	flags = dev_get_flags(netdev);
+	if (s == UP)
+		flags |= IFF_UP;
+	else
+		flags &= ~IFF_UP;
+
+	/* dev_change_flags requires rtnl mutex to be locked when called.
+	 * register_netdev calls nxp_get_stats with rtnl locked already,
+	 * syscalls however (for example by ifconfig)
+	 * do not lock rtnl before calling nxp_get_stats.
+	 * Thus we must check if the mutex is locked,
+	 * and only lock it if it is not (which defeats its purpose)
+	 */
+	needlock =  !rtnl_is_locked();
+	if (needlock)
+		rtnl_lock();
+
+	netdev->operstate = (s == UP) ? IF_OPER_UP : IF_OPER_DOWN;
+	dev_change_flags(netdev, flags);
+
+	if (needlock)
+		rtnl_unlock();
 }
 
 struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
@@ -332,14 +362,27 @@ struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
 
 	/* indicate the linkstate of the port, show host port as always up */
 	if (nxp_port->link_state || nxp_port->is_host) {
+		if (verbosity > 0)
+			netdev_alert(netdev, "Change link status of [%s] to: up\n", netdev->name);
+
 		netdev->flags |= IFF_UP;
-		netdev->flags |= IFF_RUNNING;
+
+		/* if flag change is not visible via dev_get_flags,
+		 * use dev_change_flags to commit the change
+		 */
+		if (!(dev_get_flags(netdev) & IFF_UP))
+			set_port_linkstatus(netdev, UP);
 	} else {
+		if (verbosity > 0)
+			netdev_alert(netdev, "Change link status of [%s] to: down\n", netdev->name);
+
 		netdev->flags &= ~IFF_UP;
-		netdev->flags &= ~IFF_RUNNING;
+
+		if (dev_get_flags(netdev) & IFF_UP)
+			set_port_linkstatus(netdev, DOWN);
 	}
 
-	/* get stats from switch using the sja1105 drv functions */
+	/* get stats from switch using the sja1105p drv functions */
 	err = SJA1105P_get64bitEtherStatCounter(SJA1105P_e_etherStat64_N_OCTETS,
 					       &tx_bytes,
 					       nxp_port->port_num,
@@ -443,7 +486,7 @@ struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
 	err += SJA1105P_getMacErrors(&p_macLevelErrors, nxp_port->port_num);
 
 	if (err)
-		goto sja1105_read_error;
+		goto sja1105p_read_error;
 
 	/* fill out the provided struct */
 	storage->tx_bytes = tx_bytes;
@@ -463,7 +506,7 @@ struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
 	storage->rx_dropped += addr_not_learned_drop + empty_route_drop + illegal_double_drop + double_tagged_drop + single_outer_drop + single_inner_drop + untagged_drop;
 
 	if (verbosity > 3) {
-		pr_alert("nxp_get_stats was called for [%d]: rxb [%llu], txb [%llu],"
+		netdev_alert(netdev, "nxp_get_stats was called for [%d]: rxb [%llu], txb [%llu],"
 		"rxp [%llu], txp [%llu], rx_crc_errors[%u], rx_length_errors[%u],"
 		"not_reach[%u], egr_disabled[%u], part_drop[%u], qfull[%u],"
 		"polerr[%u], vlanerr[%u], n664err[%u]\n",
@@ -474,8 +517,8 @@ struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
 
 	return storage;
 
-sja1105_read_error:
-	dev_err(&netdev->dev, "Could not read stats from sja1105!\n");
+sja1105p_read_error:
+	netdev_err(netdev, "Could not read stats from sja1105p!\n");
 	return storage;
 }
 
@@ -491,7 +534,7 @@ static int nxp_port_vlan_rx_add_vid(struct net_device *netdev,
 	nxp_port = netdev_priv(netdev);
 
 	if (verbosity > 1)
-		pr_alert("nxp_port_vlan_rx_add_vid was called for [%d], vid is [%d], proto is [%d]\n",
+		netdev_alert(netdev, "nxp_port_vlan_rx_add_vid was called for [%d], vid is [%d], proto is [%d]\n",
 		nxp_port->port_num, vid, proto);
 
 	/* retrieve current configuration from switch */
@@ -516,12 +559,12 @@ static int nxp_port_vlan_rx_add_vid(struct net_device *netdev,
 	/* write modified cfg to switch */
 	err = SJA1105P_writeVlanConfig(vid, vlanFwd, ports_enable);
 	if (err)
-		goto sja1105_write_error;
+		goto sja1105p_write_error;
 
 	return 0;
 
-sja1105_write_error:
-	dev_err(&netdev->dev, "Could not write vlan cfg to sja1105!\n");
+sja1105p_write_error:
+	netdev_err(netdev, "Could not write vlan cfg to sja1105p!\n");
 	return err;
 }
 
@@ -537,7 +580,7 @@ static int nxp_port_vlan_rx_kill_vid(struct net_device *netdev,
 	nxp_port = netdev_priv(netdev);
 
 	if (verbosity > 1)
-		pr_alert("nxp_port_vlan_rx_kill_vid was called for [%d], vid is [%d], proto is [%d]\n",
+		netdev_alert(netdev, "nxp_port_vlan_rx_kill_vid was called for [%d], vid is [%d], proto is [%d]\n",
 		nxp_port->port_num, vid, proto);
 
 	/* retrieve current configuration from switch */
@@ -554,13 +597,13 @@ static int nxp_port_vlan_rx_kill_vid(struct net_device *netdev,
 		/* write modified cfg to switch */
 		err = SJA1105P_writeVlanConfig(vid, vlanFwd, ports_enable);
 		if (err)
-			goto sja1105_write_error;
+			goto sja1105p_write_error;
 	}
 
 	return 0;
 
-sja1105_write_error:
-	dev_err(&netdev->dev, "Could not write vlan cfg to sja1105!\n");
+sja1105p_write_error:
+	netdev_err(netdev, "Could not write vlan cfg to sja1105p!\n");
 	return err;
 }
 
@@ -583,7 +626,7 @@ static int nxp_port_swdev_parent_id_get(struct net_device *netdev,
 	psid->id_len = 4;
 
 	if (verbosity > 3)
-		pr_alert("nxp_port_swdev_parent_id_get was called for [%d], ppid is [%lu]\n",
+		netdev_alert(netdev, "nxp_port_swdev_parent_id_get was called for [%d], ppid is [%lu]\n",
 		nxp_port->port_num, nxp_port->ppid);
 
 	return 0;
@@ -596,7 +639,7 @@ static int nxp_port_swdev_port_stp_update(struct net_device *netdev, u8 state)
 	struct nxp_port_data_struct *nxp_port;
 	nxp_port = netdev_priv(netdev);
 
-	/* implementation not needed, as sja1105 does not support STP */
+	/* implementation not needed, as sja1105p does not support STP */
 
 	switch (state) {
 	case BR_STATE_DISABLED:
@@ -618,7 +661,7 @@ static int nxp_port_swdev_port_stp_update(struct net_device *netdev, u8 state)
 		s = "unknown_state";
 	}
 	if (verbosity > 3)
-		pr_alert("nxp_port_swdev_port_stp_update was called [%d], change state to [%s]!\n",
+		netdev_alert(netdev, "nxp_port_swdev_port_stp_update was called [%d], change state to [%s]!\n",
 		nxp_port->port_num, s);
 
 	return 0;
@@ -637,7 +680,7 @@ static int nxp_port_swdev_fib_ipv4_add(struct net_device *netdev,
 	//TODO implement
 
 	if (verbosity > 3)
-		pr_alert("nxp_port_swdev_fib_ipv4_add was called [%d], IP: [%d.%d.%d.%d]!\n",
+		netdev_alert(netdev, "nxp_port_swdev_fib_ipv4_add was called [%d], IP: [%d.%d.%d.%d]!\n",
 		nxp_port->port_num, (((unsigned char*) &dst)[0]), (((unsigned char*) &dst)[1]), (((unsigned char*) &dst)[2]), (((unsigned char*) &dst)[3]));
 
 	return 0;
@@ -655,10 +698,28 @@ static int nxp_port_swdev_fib_ipv4_del(struct net_device *netdev,
 	//TODO implement
 
 	if (verbosity > 3)
-		pr_alert("nxp_port_swdev_fib_ipv4_del was called [%d], IP: [%d.%d.%d.%d]!\n",
+		netdev_alert(netdev, "nxp_port_swdev_fib_ipv4_del was called [%d], IP: [%d.%d.%d.%d]!\n",
 		nxp_port->port_num, (((unsigned char*) &dst)[0]), (((unsigned char*) &dst)[1]), (((unsigned char*) &dst)[2]), (((unsigned char*) &dst)[3]));
 
 	return 0;
+}
+
+/* Called when ports are toggled to reset delay lines */
+static void nxp_toggle_port(int port_num)
+{
+	SJA1105P_port_t physicalPort;
+	SJA1105P_portStatusMiixArgument_t portStatus;
+
+	SJA1105P_getPhysicalPort(port_num, &physicalPort);
+
+	SJA1105P_getPortStatusMiix(&portStatus, physicalPort.physicalPort,
+				   physicalPort.switchId);
+
+	if (portStatus.xmiiMode == SJA1105P_e_xmiiMode_RGMII) {
+		SJA1105P_resetClockDelay(physicalPort.physicalPort,
+					 physicalPort.switchId,
+					 SJA1105P_e_direction_RX);
+	}
 }
 
 /***************************link_state callback********************************/
@@ -674,10 +735,14 @@ static void nxp_adjust_link(struct net_device *netdev)
 
 	if (phydev) {
 		if (verbosity > 3)
-			pr_alert("nxp_adjust_link was called for %s: phy [%x]: state: [%x], link [%x]\n",
+			netdev_alert(netdev, "nxp_adjust_link was called for %s: phy [%x]: state: [%x], link [%x]\n",
 			netdev->name, phydev->addr, phydev->state, phydev->link);
 
 		if (phydev->link) {
+			/* If we just came up */
+			if (nxp_port->link_state == 0) {
+				nxp_toggle_port(nxp_port->port_num);
+			}
 			nxp_port->link_state = 1;
 		} else {
 			nxp_port->link_state = 0;
@@ -726,9 +791,9 @@ struct device_node *get_dt_node_for_port(int lport)
 	if (SJA1105P_getPhysicalPort(lport, &pport))
 		goto mapping_error;
 
-	/* get the DT node of the SJA1105p */
-	if (sja1105_context_arr)
-		switch_dt_node = sja1105_context_arr[pport.switchId]->of_node;
+	/* get the DT node of the SJA1105P */
+	if (sja1105p_context_arr)
+		switch_dt_node = sja1105p_context_arr[pport.switchId]->of_node;
 	if (!switch_dt_node)
 		goto node_not_found;
 
@@ -751,7 +816,7 @@ node_not_found:
 }
 
 /* find phydev corresponding to port number, return NULL if not found */
-struct phy_device *find_phydev(int lport)
+struct phy_device *find_phydev(struct net_device *netdev, int lport)
 {
 	struct device_node *port_dt_node;
 	struct device_node *phy_dt_node;
@@ -782,7 +847,7 @@ struct phy_device *find_phydev(int lport)
 
 phandle_error:
 	if (verbosity > 0)
-		pr_alert("Port %d does not have a (valid) phandle to an ethernet phy\n", lport);
+		netdev_alert(netdev, "Port %d does not have a (valid) phandle to an ethernet phy\n", lport);
 	return NULL;
 }
 
@@ -794,7 +859,7 @@ void attach_phydev(struct net_device *netdev)
 	struct phy_device *phydev;
 
 	nxp_port = netdev_priv(netdev);
-	phydev = find_phydev(nxp_port->port_num);
+	phydev = find_phydev(netdev, nxp_port->port_num);
 	if(!phydev)
 		goto phydev_not_found;
 
@@ -812,35 +877,35 @@ void attach_phydev(struct net_device *netdev)
 	phydev->state = PHY_CHANGELINK;
 
 	if (verbosity > 0)
-		pr_alert("connected phy [%x] (state: [%x], link [%x]) to port [%d], attached_dev [%s]\n",
+		netdev_alert(netdev, "connected phy [%x] (state: [%x], link [%x]) to port [%d], attached_dev [%s]\n",
 			phydev->addr, phydev->state, phydev->link, nxp_port->port_num, (phydev->attached_dev)?phydev->attached_dev->name:"none");
 
 	return;
 
 phydev_not_found:
 	if (verbosity > 0)
-		pr_alert("No phydev found for %s\n", netdev->name);
+		netdev_alert(netdev, "No phydev found for %s\n", netdev->name);
 	return;
 
 phydev_attach_error:
-	dev_err(&netdev->dev, "Error: could not attach phydev to %s [err=%d]\n", netdev->name, err);
+	netdev_err(netdev, "Error: could not attach phydev to %s [err=%d]\n", netdev->name, err);
 	return;
 }
 
-int is_hostport(int lport)
+int is_hostport(struct device *dev, int lport)
 {
 	int err;
 	SJA1105P_port_t pport;
-	struct sja1105_context_data *sw_ctx;
+	struct sja1105p_context_data *sw_ctx;
 
 	err = SJA1105P_getPhysicalPort(lport, &pport);
 	if (err)
 		goto mapping_error;
 
-	sw_ctx = sja1105_context_arr[pport.switchId];
+	sw_ctx = sja1105p_context_arr[pport.switchId];
 
 	if (verbosity > 0)
-		pr_alert("lport %d belongs to sw %d, pport %d: is host: %d\n", lport, pport.switchId, pport.physicalPort, sw_ctx->pdata->ports[pport.physicalPort].is_host);
+		dev_alert(dev, "lport %d belongs to sw %d, pport %d: is host: %d\n", lport, pport.switchId, pport.physicalPort, sw_ctx->pdata->ports[pport.physicalPort].is_host);
 
 	return sw_ctx->pdata->ports[pport.physicalPort].is_host;
 
@@ -853,6 +918,7 @@ mapping_error:
 int register_ports(struct nxp_private_data_struct *pr_data)
 {
 	int err, port = 0, alloc_size;
+	struct spi_device *spidev;
 
 	alloc_size = sizeof(struct nxp_port_data_struct *) * SJA1105P_N_LOGICAL_PORTS;
 
@@ -881,13 +947,15 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 		/* get info about the physical port */
 		err = SJA1105P_getPhysicalPort(port, &physicalPortInfo);
 		if (err)
-			goto sja1105_read_error;
+			goto sja1105p_read_error;
+
+		spidev = sja1105p_context_arr[physicalPortInfo.switchId]->spi_dev;
 
 		/* populate nxp_port */
 		nxp_port->netdev = netdev;
 		nxp_port->port_num = port;
 		nxp_port->ppid = physicalPortInfo.switchId;
-		nxp_port->is_host = is_hostport(port);
+		nxp_port->is_host = is_hostport(&spidev->dev, port);
 
 		/* give dev a meaningful name */
 		port_name = kzalloc(sizeof(char) * PNAME_LEN, GFP_KERNEL);
@@ -923,9 +991,7 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 		attach_phydev(netdev);
 
 		if (verbosity > 4) {
-			pr_alert("According to SJA1105P drv, port [%d] belongs to [%d], netdev will be called [%s]\n", port, physicalPortInfo.physicalPort, port_name);
-			pr_alert("netdev state is %s and carrier is %s\n",
-			(netdev->reg_state == NETREG_UNINITIALIZED)?"uninitialized":"initialized", (netif_carrier_ok(netdev))?"OK":"NOT_OK");
+			dev_info(&spidev->dev, "Port [%d] belongs to [%d], netdev name: [%s]\n", port, physicalPortInfo.physicalPort, port_name);
 		}
 
 		err = register_netdev(netdev);
@@ -933,7 +999,7 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 			goto netdev_registration_error;
 
 		if (verbosity > 0)
-			pr_alert("registered netdevice: [%s]\n", netdev->name);
+			netdev_info(netdev, "registered netdevice: [%s]\n", netdev->name);
 	}
 
 	return 0;
@@ -942,8 +1008,8 @@ allocation_error:
 	pr_err("register_ports failed for port %d: memory allocation error\n", port);
 	return -ENOMEM;
 
-sja1105_read_error:
-	pr_err("register_ports failed: could not read physical port data from sja1105 for port %d!\n", port);
+sja1105p_read_error:
+	pr_err("register_ports failed: could not read physical port data from sja1105p for port %d!\n", port);
 	return err;
 
 netdev_registration_error:
@@ -969,7 +1035,7 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 			struct phy_device *phydev = netdev->phydev;
 
 			if (verbosity > 0)
-				pr_alert("disconnecting phy from [%s]\n", netdev->name);
+				netdev_alert(netdev, "disconnecting phy from [%s]\n", netdev->name);
 			phy_disconnect(phydev); 	/* this stops the phy state machine */
 
 			/* decrement the refcount,
@@ -979,15 +1045,15 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 		}
 
 		if (verbosity > 0)
-			pr_alert("unregistering: [%s]\n", netdev->name);
+			netdev_alert(netdev, "unregistering: [%s]\n", netdev->name);
 		unregister_netdev(netdev);
 	}
 }
 
 /* module init function */
-int nxp_swdev_init(struct sja1105_context_data **ctx_nodes)
+int nxp_swdev_init(struct sja1105p_context_data **ctx_nodes)
 {
-	sja1105_context_arr = ctx_nodes;
+	sja1105p_context_arr = ctx_nodes;
 	return register_ports(&nxp_private_data);
 }
 

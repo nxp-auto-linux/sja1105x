@@ -1,6 +1,6 @@
 /*
 * AVB switch driver module for SJA1105
-* Copyright (C) 2016 NXP Semiconductors
+* Copyright (C) 2016 - 2018 NXP Semiconductors
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 */
 /**
 *
-* \file  sja1105_debugfs.c
+* \file  sja1105p_debugfs.c
 *
 * \author Philippe guasch, Laurent Brando
 *
@@ -32,10 +32,10 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 
-#include "sja1105_spi_linux.h"
-#include "sja1105_cfg_file.h"
-#include "sja1105_general_status.h"
-#include "sja1105_debugfs.h"
+#include "sja1105p_spi_linux.h"
+#include "sja1105p_cfg_file.h"
+#include "sja1105p_general_status.h"
+#include "sja1105p_debugfs.h"
 #include "NXP_SJA1105P_switchCore.h"
 #include "NXP_SJA1105P_diagnostics.h"
 
@@ -44,9 +44,9 @@
 extern int verbosity;
 static struct dentry *sja_dentry[SJA1105P_N_SWITCHES];
 
-static int sja1105_general_id_show(struct seq_file *s, void *data)
+static int sja1105p_general_id_show(struct seq_file *s, void *data)
 {
-	struct sja1105_context_data *ctx_data = s->private;
+	struct sja1105p_context_data *ctx_data = s->private;
 	int device_select = ctx_data->device_select;
 	u32 val32;
 
@@ -58,10 +58,10 @@ static int sja1105_general_id_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static int sja1105_general_configuration_show(struct seq_file *s, void *data)
+static int sja1105p_general_configuration_show(struct seq_file *s, void *data)
 {
 	int err;
-	struct sja1105_context_data *ctx_data = s->private;
+	struct sja1105p_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
 	int device_select = ctx_data->device_select;
 	SJA1105P_configurationFlagsArgument_t configFlags;
@@ -82,10 +82,10 @@ static int sja1105_general_configuration_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static int sja1105_general_registers_show(struct seq_file *s, void *data)
+static int sja1105p_general_registers_show(struct seq_file *s, void *data)
 {
 	int err = 0;
-	struct sja1105_context_data *ctx_data = s->private;
+	struct sja1105p_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
 	int device_select = ctx_data->device_select;
 
@@ -147,9 +147,9 @@ static int sja1105_general_registers_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static int sja1105_ethernet_mac_level_show(struct seq_file *s, void *data)
+static int sja1105p_ethernet_mac_level_show(struct seq_file *s, void *data)
 {
-	struct sja1105_context_data *ctx_data = s->private;
+	struct sja1105p_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
 	SJA1105P_macLevelErrors_t p_macLevelErrors;
 	int err, port;
@@ -172,9 +172,9 @@ static int sja1105_ethernet_mac_level_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static int sja1105_ethernet_high_level_show(struct seq_file *s, void *data)
+static int sja1105p_ethernet_high_level_show(struct seq_file *s, void *data)
 {
-	struct sja1105_context_data *ctx_data = s->private;
+	struct sja1105p_context_data *ctx_data = s->private;
 	struct spi_device *spi = ctx_data->spi_dev;
 	uint64_t tx_bytes, tx_packets, rx_bytes, rx_packets;
 	uint32_t rx_crc_errors, rx_length_errors, polerr, vlanerr, n664err;
@@ -249,13 +249,13 @@ static int sja1105_ethernet_high_level_show(struct seq_file *s, void *data)
 	return 0;
 }
 
-static ssize_t sja1105_register_rw_write(struct file* file, const char __user* user_buf, size_t size, loff_t* pos)
+static ssize_t sja1105p_register_rw_write(struct file* file, const char __user* user_buf, size_t size, loff_t* pos)
 {
 	int ret;
 	unsigned long reg_addr, reg_content;
 	char buf[BUFSIZE];
 	char operation;
-	struct sja1105_context_data *ctx_data = file->f_inode->i_private;
+	struct sja1105p_context_data *ctx_data = file->f_inode->i_private;
 	struct spi_device *spi = ctx_data->spi_dev;
 
 	/* get buffer from userspace */
@@ -267,37 +267,37 @@ static ssize_t sja1105_register_rw_write(struct file* file, const char __user* u
 		goto error;
 
 	if (operation == 'w' && ret != 3) {
-		pr_err("Error: Missing register content!\n");
+		dev_err(&spi->dev, "Error: Missing register content!\n");
 		goto error;
 	}
 
 	switch (operation) {
 	case 'r':
 		/* get content of register */
-		reg_content = sja1105_read_reg32(spi, reg_addr);
-		pr_alert("Content of register %lx: [%08lx]\n", reg_addr, reg_content);
+		reg_content = sja1105p_read_reg32(spi, reg_addr);
+		dev_alert(&spi->dev, "Content of register %lx: [%08lx]\n", reg_addr, reg_content);
 		break;
 	case 'w':
 		/* write to register */
-		ret = sja1105_cfg_block_write(spi, reg_addr, (u32*)&reg_content, 1);
+		ret = sja1105p_cfg_block_write(spi, reg_addr, (u32*)&reg_content, 1);
 		if (!ret)
-			pr_alert("Wrote %08lx to register %lx\n", reg_content, reg_addr);
+			dev_alert(&spi->dev, "Wrote %08lx to register %lx\n", reg_content, reg_addr);
 		else
-			pr_alert("Error writing to register %lx\n", reg_addr);
+			dev_err(&spi->dev, "Error writing to register %lx\n", reg_addr);
 		break;
 	default:
-		pr_err("Invalid operator\n");
+		dev_err(&spi->dev, "Invalid operator\n");
 		break;
 	}
 
 	return size;
 
 error:
-	pr_err("Invalid command\n");
+	dev_err(&spi->dev, "Invalid command\n");
 	return size;
 }
 
-static int sja1105_register_rw_show(struct seq_file *s, void *data)
+static int sja1105p_register_rw_show(struct seq_file *s, void *data)
 {
 	seq_printf(s, "Read a register: write \"r:REG_ADDR\" to this file, where REG_ADDR is hexadecimal\n");
 	seq_printf(s, "Write a register: write \"w:REG_ADDR:REG_CONTENT\" to this file, where REG_ADDR and REG_CONTENT are hexadecimal\n");
@@ -306,87 +306,87 @@ static int sja1105_register_rw_show(struct seq_file *s, void *data)
 }
 
 
-static int sja1105_general_id_open(struct inode *inode, struct file *file)
+static int sja1105p_general_id_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_general_id_show, inode->i_private);
+	return single_open(file, sja1105p_general_id_show, inode->i_private);
 }
 
-static int sja1105_general_configuration_open(struct inode *inode, struct file *file)
+static int sja1105p_general_configuration_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_general_configuration_show, inode->i_private);
+	return single_open(file, sja1105p_general_configuration_show, inode->i_private);
 }
 
-static int sja1105_general_registers_open(struct inode *inode, struct file *file)
+static int sja1105p_general_registers_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_general_registers_show, inode->i_private);
+	return single_open(file, sja1105p_general_registers_show, inode->i_private);
 }
 
-static int sja1105_ethernet_mac_level_open(struct inode *inode, struct file *file)
+static int sja1105p_ethernet_mac_level_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_ethernet_mac_level_show, inode->i_private);
+	return single_open(file, sja1105p_ethernet_mac_level_show, inode->i_private);
 }
 
-static int sja1105_ethernet_high_level_open(struct inode *inode, struct file *file)
+static int sja1105p_ethernet_high_level_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_ethernet_high_level_show, inode->i_private);
+	return single_open(file, sja1105p_ethernet_high_level_show, inode->i_private);
 }
 
-static int sja1105_register_rw_open(struct inode *inode, struct file *file)
+static int sja1105p_register_rw_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, sja1105_register_rw_show, inode->i_private);
+	return single_open(file, sja1105p_register_rw_show, inode->i_private);
 }
 
-static const struct file_operations sja1105_general_id_fops = {
-	.open		= sja1105_general_id_open,
+static const struct file_operations sja1105p_general_id_fops = {
+	.open		= sja1105p_general_id_open,
 	.release	= single_release,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 };
 
-static const struct file_operations sja1105_general_configuration_fops = {
-	.open		= sja1105_general_configuration_open,
+static const struct file_operations sja1105p_general_configuration_fops = {
+	.open		= sja1105p_general_configuration_open,
 	.release	= single_release,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 };
 
-static const struct file_operations sja1105_general_registers_fops = {
-	.open		= sja1105_general_registers_open,
+static const struct file_operations sja1105p_general_registers_fops = {
+	.open		= sja1105p_general_registers_open,
 	.release	= single_release,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 };
 
-static const struct file_operations sja1105_ethernet_mac_level_fops = {
-	.open		= sja1105_ethernet_mac_level_open,
+static const struct file_operations sja1105p_ethernet_mac_level_fops = {
+	.open		= sja1105p_ethernet_mac_level_open,
 	.release	= single_release,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 };
 
-static const struct file_operations sja1105_ethernet_high_level_fops = {
-	.open		= sja1105_ethernet_high_level_open,
+static const struct file_operations sja1105p_ethernet_high_level_fops = {
+	.open		= sja1105p_ethernet_high_level_open,
 	.release	= single_release,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 };
 
-static const struct file_operations sja1105_register_rw = {
-	.open		= sja1105_register_rw_open,
+static const struct file_operations sja1105p_register_rw = {
+	.open		= sja1105p_register_rw_open,
 	.release	= single_release,
 	.read		= seq_read,
-	.write		= sja1105_register_rw_write,
+	.write		= sja1105p_register_rw_write,
 	.llseek		= seq_lseek,
 };
 
-void sja1105_debugfs_init(struct sja1105_context_data *ctx_data)
+void sja1105p_debugfs_init(struct sja1105p_context_data *ctx_data)
 {
 	int device_select;
 	char dentry_name[12];
 	struct dentry *general_dentry, *ethernet_dentry;
 
 	device_select = ctx_data->device_select;
-	scnprintf(dentry_name, 12, "sja1105-%d", device_select);
+	scnprintf(dentry_name, 12, "sja1105p-%d", device_select);
 
 	sja_dentry[device_select] = debugfs_create_dir(dentry_name, NULL);
 	if (!sja_dentry[device_select])
@@ -396,20 +396,20 @@ void sja1105_debugfs_init(struct sja1105_context_data *ctx_data)
 	if (!general_dentry)
 		return;
 
-	debugfs_create_file("id", S_IRUSR, general_dentry, ctx_data, &sja1105_general_id_fops);
-	debugfs_create_file("configuration", S_IRUSR, general_dentry, ctx_data, &sja1105_general_configuration_fops);
-	debugfs_create_file("registers", S_IRUSR, general_dentry, ctx_data, &sja1105_general_registers_fops);
-	debugfs_create_file("register_rw", S_IRUSR, general_dentry, ctx_data, &sja1105_register_rw);
+	debugfs_create_file("id", S_IRUSR, general_dentry, ctx_data, &sja1105p_general_id_fops);
+	debugfs_create_file("configuration", S_IRUSR, general_dentry, ctx_data, &sja1105p_general_configuration_fops);
+	debugfs_create_file("registers", S_IRUSR, general_dentry, ctx_data, &sja1105p_general_registers_fops);
+	debugfs_create_file("register_rw", S_IRUSR, general_dentry, ctx_data, &sja1105p_register_rw);
 
 	ethernet_dentry = debugfs_create_dir("ethernet", sja_dentry[device_select]);
 	if (!ethernet_dentry)
 		return;
 
-	debugfs_create_file("mac-level", S_IRUSR, ethernet_dentry, ctx_data, &sja1105_ethernet_mac_level_fops);
-	debugfs_create_file("high-level", S_IRUSR, ethernet_dentry, ctx_data, &sja1105_ethernet_high_level_fops);
+	debugfs_create_file("mac-level", S_IRUSR, ethernet_dentry, ctx_data, &sja1105p_ethernet_mac_level_fops);
+	debugfs_create_file("high-level", S_IRUSR, ethernet_dentry, ctx_data, &sja1105p_ethernet_high_level_fops);
 }
 
-void sja1105_debugfs_remove(struct sja1105_context_data *ctx_data)
+void sja1105p_debugfs_remove(struct sja1105p_context_data *ctx_data)
 {
 	debugfs_remove_recursive(sja_dentry[ctx_data->device_select]);
 	sja_dentry[ctx_data->device_select] = NULL;

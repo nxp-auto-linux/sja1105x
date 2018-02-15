@@ -161,6 +161,54 @@ extern uint8_t SJA1105P_setupClockDelay(uint16_t delay, uint8_t port, uint8_t sw
 	return ret;
 }
 
+
+/**
+* \brief Reset a clock delay at a given port. 
+*
+* \param[in]  port Port to be configured
+* \param[in]  switchId switch at which the delay should be configured
+* \param[in]  direction Selection of delay in Tx or Rx direction
+*
+* \return uint8_t Returns 0 upon successful configuration, else failed.
+*/
+extern uint8_t SJA1105P_resetClockDelay(uint8_t port, uint8_t switchId, SJA1105P_direction_t direction)
+{
+	uint8_t ret;
+	SJA1105P_cfgPadMiixIdArgument_t cfgPadMiixId;
+
+	ret = SJA1105P_getCfgPadMiixId(&cfgPadMiixId, port, switchId);
+	if (ret != 0U)
+		return ret;
+
+	if (direction == SJA1105P_e_direction_TX)
+	{
+		cfgPadMiixId.txcPd = 1;
+		cfgPadMiixId.txcBypass = 1;
+	}
+	else
+	{
+		cfgPadMiixId.rxcPd = 1;
+		cfgPadMiixId.rxcBypass = 1;
+	}
+
+	ret = SJA1105P_setCfgPadMiixId(&cfgPadMiixId, port, switchId);
+
+	if (direction == SJA1105P_e_direction_TX)
+	{
+		cfgPadMiixId.txcPd = 0;
+		cfgPadMiixId.txcBypass = 0;
+	}
+	else
+	{
+		cfgPadMiixId.rxcPd = 0;
+		cfgPadMiixId.rxcBypass = 0;
+	}
+
+	ret = SJA1105P_setCfgPadMiixId(&cfgPadMiixId, port, switchId);
+
+	return ret;
+}
+
 /**
 * \brief Initialized the SGMII core
 *

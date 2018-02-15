@@ -18,7 +18,7 @@
 */
 /**
 *
-* \file sja1105_spi_linux.h
+* \file sja1105p_spi_linux.h
 *
 * \author NXP Semiconductors
 *
@@ -27,15 +27,15 @@
 * \brief Functions definitions for Linux platform dependent SPI read and write functions
 *
 *****************************************************************************/
-#ifndef _SJA1105_SPI_LINUX_H
-#define _SJA1105_SPI_LINUX_H
+#ifndef _SJA1105P_SPI_LINUX_H
+#define _SJA1105P_SPI_LINUX_H
 
 /*
- * The configuration must be loaded into SJA1105 starting from 0x20000
+ * The configuration must be loaded into SJA1105P starting from 0x20000
  * The configuration must be split in 64 words block transfers
  */
-#define SJA1105_CONFIG_START_ADDRESS 0x20000UL
-#define SJA1105_CONFIG_WORDS_PER_BLOCK 64
+#define SJA1105P_CONFIG_START_ADDRESS 0x20000UL
+#define SJA1105P_CONFIG_WORDS_PER_BLOCK 64
 
 #define CMD_RWOP_SHIFT 31
 #define CMD_RD_OP 0
@@ -55,7 +55,7 @@
 void register_spi_callback(struct spi_device *spi, int device_select, int active_switches);
 void unregister_spi_callback(int active_switches);
 
-u32 sja1105_read_reg32(struct spi_device *spi, u32 reg_addr);
-int sja1105_cfg_block_write(struct spi_device *spi, u32 reg_addr, u32 *data, int nb_words);
+u32 sja1105p_read_reg32(struct spi_device *spi, u32 reg_addr);
+int sja1105p_cfg_block_write(struct spi_device *spi, u32 reg_addr, u32 *data, int nb_words);
 
-#endif /* _SJA1105_SPI_LINUX_H */
+#endif /* _SJA1105P_SPI_LINUX_H */

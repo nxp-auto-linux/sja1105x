@@ -1,5 +1,5 @@
-#ifndef __SJA1105_LISTS_H__
-#define __SJA1105_LISTS_H__
+#ifndef __SJA1105P_LISTS_H__
+#define __SJA1105P_LISTS_H__
 
 
 /**

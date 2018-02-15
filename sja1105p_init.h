@@ -18,17 +18,17 @@
 */
 /**
 *
-* \file sja1105_init.h
+* \file sja1105p_init.h
 *
 * \author Philippe guasch, Laurent Brando
 *
 * \date 2017-08-02
 *
-* \brief Functions definitions for SJA1105 spi
+* \brief Functions definitions for SJA1105P spi
 *
 *****************************************************************************/
-#ifndef _SJA1105_SPI_H__
-#define _SJA1105_SPI_H__
+#ifndef _SJA1105P_SPI_H__
+#define _SJA1105P_SPI_H__
 
 #include "NXP_SJA1105P_auxiliaryConfigurationUnit.h"
 
@@ -42,24 +42,24 @@ struct port_desc {
 	int logical_port_num;         /**< The logical port number of the physical port */
 };
 
-struct sja1105_platform_data {
-	const char * fw_name;                  /**< Name of SJA1105 configuration binary file */
+struct sja1105p_platform_data {
+	const char * fw_name;                  /**< Name of SJA1105P configuration binary file */
 	int host_port_id;                      /**< Number of port to which Host is tied */
-	struct port_desc ports[SJA1105_PORT_NB];
+	struct port_desc ports[SJA1105P_PORT_NB];
 };
 
-struct sja1105_context_data {
+struct sja1105p_context_data {
 	struct spi_device	*spi_dev;        /**< passsed at spi probing*/
 	struct device_node	*of_node;        /**< Open Firmware node describing device */
 	int device_select;			/**< The switch ID */
 
 	char fw_name[64];               /**< Constructed filename depends on number of SJA1105
 				     chips in configuration and their revision MRA1 or MRA2 */
-	int sja1105_chip_revision;
-	struct sja1105_platform_data *pdata;
+	int sja1105p_chip_revision;
+	struct sja1105p_platform_data *pdata;
 
 	struct list_head cfg_block_list;        /**< Block list resulting from call to configuration file parsing function */
 };
 
 
-#endif /* _SJA1105_SPI_H__ */
+#endif /* _SJA1105P_SPI_H__ */

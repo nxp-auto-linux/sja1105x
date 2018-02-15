@@ -254,7 +254,7 @@ extern void SJA1105P_registerFrameRecvCB(SJA1105P_recvFrame_cb_t pf_recvFrame_cb
 /**
 * \brief Check for received Ethernet frames and forward them
 *
-* This function should be called to trigger the SJA1105 EthIf to forward received
+* This function should be called to trigger the SJA1105P EthIf to forward received
 * frames to the higher software layers. It is ideally called every time the
 * Ethernet MAC has received a frame.
 *

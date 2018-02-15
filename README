@@ -1,0 +1,60 @@
+SJA1105PQRS Linux Switch Driver Release v0.1 20180212 - User Notes
+------------------------------------------------------------
+Changelog
+v0.1: (Feb 2018)
+-Intitial release
+
+------------------------------------------------------------
+Table of Contents
+1) Overview
+2) SJA1105PQRS loading
+3) Switchdev
+4) DTS Information
+5) Compile time configuration
+6) Limitations and known issues
+-------------------------------------------------------------
+
+1) Overview
+The SJA1105PQRS Linux Switch Driver contains several components:
+        - platform independent HAL for the switch hardware (supports SJA1105P, SJA1105Q, SJA1105R, SJA1105S)
+        - platform dependent sublayer of the HAL, enables SPI communication with the hardware
+        - switchdev component exposes some functionality of the switch to linux userspace
+
+2) SJA1105PQRS loading
+- Load the kernel module: eg. "insmod SJA1105PQRS.ko"
+- Available module parameters are:
+        - max_hz: SPI bus speed may be limited for the remote SJA1105PQRS application board, 25MHz is the maximum
+        - ifname: Network interface name for SJA1105PQRS Host port: default to 'eth0'
+        - verbosity: Trace level
+        - enable_switchdev: Enable the switchdev driver
+
+3) Switchdev
+The switchdev component exposes some functionality of the SJA1105PQRS switch to linux userspace
+        - Manipulation of the switching table (FDB)
+                - Add an FDB entry for a given address to the table of a given switchport: "bridge fdb add <MAC> dev <DEV>"
+                - Deletes the FDB entry corresponding to a given address from the table of a given switchport: "bridge fdb del <MAC> dev <DEV>"
+                - Dump all FDB entries: "bridge fdb show"
+        - Manipulation of VLAN configuration
+                - Register a VLAN id: vconfig add <DEV> <VID>
+                - Unregister a VLAN id: vconfig rem <DEV> <VID>
+
+4) DTS Information
+Please refer to doc/README
+
+5) Compile time configuration
+Some platform dependent parameters need to be configured at compile time. These parameters can be found in the Makefile:
+        - NUMBER_SWITCHES: The number of switches attached to the system
+        - SPI_FREQ: Frequency at which the SPI Bus operates
+        - SPI_SWAP: If given a nonzero value, the upper 16bit of a 32bit word are swapped with the lower 16bit
+        - SPI_BPW: bits_per_word setting of the SPI Controller that is used
+        - SPI_BPW_MSG: bits_per_word setting for an individual message, in general this should be equal to SPI_BPW
+        - NR_CFG_BLOCKS: number of words that are sent at once in a single SPI transmission
+
+
+6) Limitations and known issues
+- Incompatibility with spi_imx driver
+                The chipselect (CS) pin is deasserted in between 32_bit words when using bits_per_word setting of 32. Switch aborts transaction as soon as CS is deasserted, which makes communication impossible.
+		The spi_transfer.cs_change option is ignored by spi imx driver. As a temporary workaround, a low level patch (core/spi.c) can be used.
+                This is a known problem, refer for example to:
+                https://community.nxp.com/thread/387852
+                https://community.nxp.com/thread/309866

@@ -18,17 +18,17 @@
 */
 /**
 *
-* \file sja1105_cbs.h
+* \file sja1105p_cbs.h
 *
 * \author Laurent Brando
 *
 * \date 2017-01-17
 *
-* \brief Functions definitions for SJA1105 General Status Information
+* \brief Functions definitions for SJA1105P General Status Information
 *
 *****************************************************************************/
-#ifndef _SJA1105_GENERAL_STATUS_H__
-#define _SJA1105_GENERAL_STATUS_H__
+#ifndef _SJA1105P_GENERAL_STATUS_H__
+#define _SJA1105P_GENERAL_STATUS_H__
 
 struct _SJA_CONF {
 	unsigned long num_ports;
@@ -45,4 +45,4 @@ struct _SJA_CONF_STATUS {
 int sja_get_device_id(unsigned int *device_id, unsigned int device_select);
 int sja_get_configuration_status(struct _SJA_CONF_STATUS *config_status, unsigned int device_select);
 
-#endif /* _SJA1105_GENERAL_STATUS_H__ */
+#endif /* _SJA1105P_GENERAL_STATUS_H__ */

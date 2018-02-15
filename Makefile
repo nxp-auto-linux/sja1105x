@@ -22,6 +22,19 @@ ifeq ($(MYPLATFORM), imx)
 	MYARCHITECTURE=arm
 	MYCOMPILER=arm-linux-gnueabi-gcc-4.7
 	KERNELDIR ?= /home/marco/Documents/linux_automotive/linux_avb
+else ifeq ($(MYPLATFORM), evb)
+	#evb
+	NUMBER_SWITCHES ?= 2
+	SPI_FREQ ?= 12000000
+	SPI_SWAP ?= 1
+	SPI_BPW ?= 16
+	SPI_BPW_MSG ?= 16
+	NR_CFG_BLOCKS ?= 1
+
+	MYTOOLCHAIN=aarch64-linux-gnu-
+	MYARCHITECTURE=arm64
+	MYCOMPILER=aarch64-linux-gnu-gcc
+	KERNELDIR ?= ~/work/linux
 else ifeq ($(MYPLATFORM), bbmini)
 	#bbmini
 	NUMBER_SWITCHES ?= 3
@@ -43,10 +56,10 @@ all:
 	$(MAKE) ARCH=$(MYARCHITECTURE) CROSS_COMPILE=$(MYTOOLCHAIN) CC=$(MYCOMPILER) -C $(KERNELDIR) M=`pwd` modules
 
 clean:
-	$(MAKE) ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- CC=arm-linux-gnueabi-gcc-4.7 -C $(KERNELDIR) M=`pwd` $@
+	$(MAKE) ARCH=$(MYARCHITECTURE) CROSS_COMPILE=$(MYTOOLCHAIN) CC=$(MYCOMPILER) -C $(KERNELDIR) M=`pwd` $@
 
 
-obj-m +=  sja1105.o
+obj-m +=  sja1105pqrs.o
 
 #include and src paths
 APP_SRC_PATH   = app/src
@@ -66,37 +79,37 @@ PLATFORM_DEPENDENT += -D SPI_FREQUENCY=$(SPI_FREQ) -D SPI_SWITCH_WORDS=$(SPI_SWA
 EXTRA_CFLAGS+=  -I$(KERNELDIR)/include/linux -I$(INDEP_INC_PATH) -I$(INDEP_LL_INC_PATH) -I$(INT_INC_PATH) -I$(APP_INC_PATH) -I$(SWDEV_INC_PATH) -I$(src) $(PLATFORM_DEPENDENT)
 
 #Top level
-sja1105-y := sja1105_init.o
+sja1105pqrs-y := sja1105p_init.o
 
 #platform integration
-sja1105-y += $(INT_SRC_PATH)/sja1105_spi_linux.o
+sja1105pqrs-y += $(INT_SRC_PATH)/sja1105p_spi_linux.o
 
 #apps
-sja1105-y += $(APP_SRC_PATH)/sja1105_cfg_file.o
-sja1105-y += $(APP_SRC_PATH)/sja1105_debugfs.o
-sja1105-y += $(APP_SRC_PATH)/sja1105_general_status.o
-sja1105-y += $(APP_SRC_PATH)/hal_export.o
+sja1105pqrs-y += $(APP_SRC_PATH)/sja1105p_cfg_file.o
+sja1105pqrs-y += $(APP_SRC_PATH)/sja1105p_debugfs.o
+sja1105pqrs-y += $(APP_SRC_PATH)/sja1105p_general_status.o
+sja1105pqrs-y += $(APP_SRC_PATH)/sja1105p_hal_export.o
 
 #platform independent
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_config.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_cbs.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_mgmtRoutes.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_ptp.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_vlan.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_ethIf.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_portConfig.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_utils.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_addressResolutionTable.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_configStream.o
-sja1105-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_diagnostics.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_config.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_cbs.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_mgmtRoutes.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_ptp.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_vlan.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_ethIf.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_portConfig.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_utils.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_addressResolutionTable.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_configStream.o
+sja1105pqrs-y += $(INDEP_SRC_PATH)/NXP_SJA1105P_diagnostics.o
 
 #low level driver
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_auxiliaryConfigurationUnit.o
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_clockGenerationUnit.o
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_resetGenerationUnit.o
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_sgmii.o
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_spi.o
-sja1105-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_switchCore.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_auxiliaryConfigurationUnit.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_clockGenerationUnit.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_resetGenerationUnit.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_sgmii.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_spi.o
+sja1105pqrs-y += $(INDEP_LL_SRC_PATH)/NXP_SJA1105P_switchCore.o
 
 #switchdev
-sja1105-y += $(SWDEV_SRC_PATH)/sja1105p_switchdev.o
+sja1105pqrs-y += $(SWDEV_SRC_PATH)/sja1105p_switchdev.o

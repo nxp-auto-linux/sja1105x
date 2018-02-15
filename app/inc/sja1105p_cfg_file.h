@@ -18,7 +18,7 @@
 */
 /**
 *
-* \file sja1105_cfg_file.h
+* \file sja1105p_cfg_file.h
 *
 * \author Philippe guasch
 *
@@ -27,36 +27,34 @@
 * \brief public functions and data structures related to configuration file handling
 *
 *****************************************************************************/
-#ifndef _SJA1105_CFG_FILE_H__
-#define _SJA1105_CFG_FILE_H__
+#ifndef _SJA1105P_CFG_FILE_H__
+#define _SJA1105P_CFG_FILE_H__
 
 
 #include <linux/list.h>
 
-#define SJA1105_PORT_NB 5
+#define SJA1105P_PORT_NB 5
 
-#define SJA1105_NB_REV 4
-#define SJA1105_VAL_DEVICEID_1              0x9C00000CUL /* MRA1*/
-#define SJA1105_VAL_DEVICEID_2              0x9E00030EUL /* MRA2LT */
-#define SJA1105_VAL_DEVICEID_3              0x9F00030EUL /* MRA2 */
-#define SJA1105P_VAL_DEVICEID               0XAE00030EUL
+#define SJA1105P_NB_REV 2
+#define SJA1105QS_VAL_DEVICEID              0xae00030eUL
+#define SJA1105PR_VAL_DEVICEID              0xaf00030eUL
 
 
-#define SJA1105_BLOCK_L2_ADDR_LOOKUP_TB     0x05
-#define SJA1105_BLOCK_L2_POLICING_TB        0x06
-#define SJA1105_BLOCK_VLAN_LOOKUP_TB        0x07
-#define SJA1105_BLOCK_L2_FORWARDING_TB      0x08
-#define SJA1105_BLOCK_MAC_CONFIG_TB         0x09
-#define SJA1105_BLOCK_L2_ADDR_LOOKUP_PARAMS 0x0d
-#define SJA1105_BLOCK_L2_FORWARDING_PARAMS  0x0e
-#define SJA1105_BLOCK_AVB_PARAMETERS        0x10
-#define SJA1105_BLOCK_GENERAL_PARAMETERS    0x11
-#define SJA1105_BLOCK_RETAGGING_TB          0x12
-#define SJA1105_CREDIT_BASED_SHAPING_TB     0x13
-#define SJA1105_BLOCK_xMII_PARAMETERS       0x4e
-#define SJA1105_BLOCK_CGU_CONFIG_PARAMETERS 0x80
-#define SJA1105_BLOCK_RGU_CONFIG_PARAMETERS 0x81
-#define SJA1105_BLOCK_ACU_CONFIG_PARAMETERS 0x82
+#define SJA1105P_BLOCK_L2_ADDR_LOOKUP_TB     0x05
+#define SJA1105P_BLOCK_L2_POLICING_TB        0x06
+#define SJA1105P_BLOCK_VLAN_LOOKUP_TB        0x07
+#define SJA1105P_BLOCK_L2_FORWARDING_TB      0x08
+#define SJA1105P_BLOCK_MAC_CONFIG_TB         0x09
+#define SJA1105P_BLOCK_L2_ADDR_LOOKUP_PARAMS 0x0d
+#define SJA1105P_BLOCK_L2_FORWARDING_PARAMS  0x0e
+#define SJA1105P_BLOCK_AVB_PARAMETERS        0x10
+#define SJA1105P_BLOCK_GENERAL_PARAMETERS    0x11
+#define SJA1105P_BLOCK_RETAGGING_TB          0x12
+#define SJA1105P_CREDIT_BASED_SHAPING_TB     0x13
+#define SJA1105P_BLOCK_xMII_PARAMETERS       0x4e
+#define SJA1105P_BLOCK_CGU_CONFIG_PARAMETERS 0x80
+#define SJA1105P_BLOCK_RGU_CONFIG_PARAMETERS 0x81
+#define SJA1105P_BLOCK_ACU_CONFIG_PARAMETERS 0x82
 
 
 
@@ -65,15 +63,15 @@
  ************************************************************************************************/
 
 /**
- * sja1105_cfg_block
- * Structure extracted after parsing the SJA1105 configuration file
+ * sja1105p_cfg_block
+ * Structure extracted after parsing the SJA1105P configuration file
  * Direct access to configuration blocks is required for system wide checking
  * For instance AVB parameters or XMII port settings are fixed for a given hardware and need
  * to be compared or fixed between configuration and actual hardware.
  * No method provided to recalculate the CRC32.
  */
 
-struct sja1105_cfg_block {
+struct sja1105p_cfg_block {
 
   struct list_head link_block; /**<  forward and backward chaining structure */
 
@@ -89,12 +87,12 @@ struct sja1105_cfg_block {
  * Public variables
  ************************************************************************************************/
 /*
- * List of device Ids of supported SJA1105 variants: MRA1, MRA2, MRA2LT
+ * List of device Ids of supported devices: SJA1105P, SJA1105Q, SJA1105R, SJA1105S
  */
 extern const u32 device_id_list[];
 
-extern int sja1105_config_file_split_blocks(struct spi_device *spi, struct list_head * block_list, u32* cfg_data, u32 cfg_word_size, int verbosity);
+extern int sja1105p_config_file_split_blocks(struct spi_device *spi, struct list_head * block_list, u32* cfg_data, u32 cfg_word_size, int verbosity);
 
-extern struct sja1105_cfg_block * sja1105_config_block_seek(struct list_head* block_list, u8 id_to_search);
+extern struct sja1105p_cfg_block * sja1105p_config_block_seek(struct list_head* block_list, u8 id_to_search);
 
 #endif

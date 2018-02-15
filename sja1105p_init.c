@@ -1,6 +1,6 @@
 /*
 * AVB switch driver module for SJA1105
-* Copyright (C) 2016 NXP Semiconductors
+* Copyright (C) 2016 - 2018 NXP Semiconductors
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -18,13 +18,13 @@
 */
 /**
 *
-* \file  sja1105_spi.c
+* \file  sja1105p_spi.c
 *
 * \author Philippe guasch, Laurent Brando
 *
 * \date 2016-02-22
 *
-* \brief SJA1105 SPI driver
+* \brief SJA1105P SPI driver
 *
 *****************************************************************************/
 #include <linux/init.h>
@@ -48,12 +48,12 @@
 #include "NXP_SJA1105P_portConfig.h"
 #include "NXP_SJA1105P_cbs.h"
 
-#include "sja1105_spi_linux.h"
-#include "sja1105_cfg_file.h"
-#include "sja1105_general_status.h"
-#include "sja1105_debugfs.h"
+#include "sja1105p_spi_linux.h"
+#include "sja1105p_cfg_file.h"
+#include "sja1105p_general_status.h"
+#include "sja1105p_debugfs.h"
 #include "sja1105p_switchdev.h"
-#include "sja1105_init.h"
+#include "sja1105p_init.h"
 
 /*
  * Local constants and macros
@@ -67,11 +67,11 @@
  */
 static int max_hz = SPI_FREQUENCY; /* 25 MHz is the default but might have to be reduced */
 module_param(max_hz, int, S_IRUGO);
-MODULE_PARM_DESC(max_hz, "SPI bus speed may be limited for the remote SJA1105 application board, 25MHz is the maximum");
+MODULE_PARM_DESC(max_hz, "SPI bus speed may be limited for the remote SJA1105P application board, 25MHz is the maximum");
 
 static char *ifname =  "eth0";
 module_param(ifname, charp, S_IRUGO);
-MODULE_PARM_DESC(ifname, "Network interface name for SJA1105 Host port: default to 'eth0'");
+MODULE_PARM_DESC(ifname, "Network interface name for SJA1105P Host port: default to 'eth0'");
 
 int verbosity =  0;
 module_param(verbosity, int, S_IRUGO);
@@ -85,35 +85,31 @@ MODULE_PARM_DESC(enable_switchdev, "Enable the switchdev driver");
 /* This is not very elegant. Linux linux treats every switch as a separate device,
  * whereas the HAL functions treat multiswitch configurations as one big logical device.
  * This means eg SJA1105P_initManualPortMapping() must only be called once, once the mapping for ALL switches is known.
- * We accumulate information during subsequent probe calls, once all switches are probed, we do one final call to sja1105_probe_final
+ * We accumulate information during subsequent probe calls, once all switches are probed, we do one final call to sja1105p_probe_final
  */
 static DEFINE_RWLOCK(rwlock);
 static int switches_active;
 bool do_auto_mapping = false;
 SJA1105P_port_t portMapping[SJA1105P_N_LOGICAL_PORTS];
-struct sja1105_context_data *sja1105_cotext_arr[SJA1105P_N_SWITCHES];
+struct sja1105p_context_data *sja1105p_context_arr[SJA1105P_N_SWITCHES];
 
 
-#define NUM_DT_ENTRIES 2
-static const struct of_device_id sja1105_dt_ids[] = {
-	{  .compatible = "nxp,sja1105-switch",  .data = (const void*)0 },    /* SJA1105 */
-	{  .compatible = "nxp,sja1105p-switch",  .data = (const void*)1 },   /* SJA1105P */
+#define NUM_DT_ENTRIES 1
+static const struct of_device_id sja1105p_dt_ids[] = {
+	{  .compatible = "nxp,sja1105p-switch",  .data = (const void*)0 },   /* SJA1105P */
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, sja1105_dt_ids);
+MODULE_DEVICE_TABLE(of, sja1105p_dt_ids);
 
 
 /* Filenames to be located in /lib/firmware for instance */
 const char * product_names[] = {
-	"sja1105",
 	"sja1105p"
 };
 
-/* chip version is determined in sja1105_check_device_id(), suffix chosen accordingly */
-const char * fw_name_suffix[SJA1105_NB_REV] = {
-	"_mra1",
-	"_mra2lt",
-	"_mra2",
+/* chip version is determined in sja1105p_check_device_id(), suffix chosen accordingly */
+const char * fw_name_suffix[SJA1105P_NB_REV] = {
+	""
 	""
 };
 
@@ -121,14 +117,14 @@ struct _SJA_CONF sja_cfg;
 
 
 
-static int sja1105_check_device_id(struct spi_device *spi, unsigned int device_select, bool dump_id)
+static int sja1105p_check_device_id(struct spi_device *spi, unsigned int device_select, bool dump_id)
 {
 	int val = -1;
 	int i;
 	u32 devid;
 
 	if (!sja_get_device_id(&devid, device_select)) {
-		for (i = 0; i < SJA1105_NB_REV; i++) {
+		for (i = 0; i < SJA1105P_NB_REV; i++) {
 			if (devid == device_id_list[i]) {
 				val = i;
 				if (dump_id) dev_info(&spi->dev, "Detected Device ID %08x (%s)\n", devid, fw_name_suffix[i]);
@@ -138,14 +134,14 @@ static int sja1105_check_device_id(struct spi_device *spi, unsigned int device_s
 	}
 
 	if (val == -1)
-		dev_err(&spi->dev, "SJA1105 invalid Device Id, is %08x\n", devid);
+		dev_err(&spi->dev, "SJA1105P invalid Device Id, is %08x\n", devid);
 
 	return val;
 }
 
-static bool sja1105_check_device_status(struct spi_device *spi)
+static bool sja1105p_check_device_status(struct spi_device *spi)
 {
-	struct sja1105_context_data *sw_ctx = spi_get_drvdata(spi);
+	struct sja1105p_context_data *sw_ctx = spi_get_drvdata(spi);
 	SJA1105P_configurationFlagsArgument_t configFlags;
 	uint8_t switchId;
 	uint8_t err;
@@ -171,9 +167,9 @@ static bool sja1105_check_device_status(struct spi_device *spi)
 	return ret;
 }
 
-static int sja1105_config_avb_param_check(struct spi_device *spi, struct sja1105_context_data *sw_ctx)
+static int sja1105p_config_avb_param_check(struct spi_device *spi, struct sja1105p_context_data *sw_ctx)
 {
-	struct sja1105_cfg_block * avb_param_block;
+	struct sja1105p_cfg_block * avb_param_block;
 	u8 * p;
 	u8 metaframe_sa[6];
 	u8 metaframe_da[6];
@@ -183,7 +179,7 @@ static int sja1105_config_avb_param_check(struct spi_device *spi, struct sja1105
 	if (verbosity) dev_info(&spi->dev, "Looking for AVB parameters\n");
 
 	/* Seek for AVB parameters section of config file if any */
-	avb_param_block = sja1105_config_block_seek(&sw_ctx->cfg_block_list, SJA1105_BLOCK_AVB_PARAMETERS);
+	avb_param_block = sja1105p_config_block_seek(&sw_ctx->cfg_block_list, SJA1105P_BLOCK_AVB_PARAMETERS);
 	if (avb_param_block /*&& avb_param_block->block_sz == 3 already checked */) {
 		p = (u8*)avb_param_block->block_data;
 		for (i = 0; i<6; i++) {
@@ -226,19 +222,19 @@ static int sja1105_config_avb_param_check(struct spi_device *spi, struct sja1105
 	return 0;
 }
 
-static bool sja1105_post_cfg_load_check(struct spi_device *spi,  struct sja1105_context_data *sw_ctx)
+static bool sja1105p_post_cfg_load_check(struct spi_device *spi,  struct sja1105p_context_data *sw_ctx)
 {
 	int chip_id;
 
-	/* Trying to read back the SJA1105 status via SPI... */
-	chip_id  = sja1105_check_device_id(spi, sw_ctx->device_select, 0);
-	if (chip_id != sw_ctx->sja1105_chip_revision)
+	/* Trying to read back the SJA1105P status via SPI... */
+	chip_id  = sja1105p_check_device_id(spi, sw_ctx->device_select, 0);
+	if (chip_id != sw_ctx->sja1105p_chip_revision)
 		return false;
 
-	return sja1105_check_device_status(spi);
+	return sja1105p_check_device_status(spi);
 }
 
-char *sja1105_clksrc_to_str(SJA1105P_clksrc_t clksrc)
+char *sja1105p_clksrc_to_str(SJA1105P_clksrc_t clksrc)
 {
 	switch (clksrc)
 	{
@@ -268,14 +264,14 @@ char *sja1105_clksrc_to_str(SJA1105P_clksrc_t clksrc)
 	return "unknown";
 }
 
-static void sja1105_cgu_dump(struct spi_device *spi)
+static void sja1105p_cgu_dump(struct spi_device *spi)
 {
 	int err, port;
 	SJA1105P_port_t pport;
 	SJA1105P_idivCControlRegisterArgument_t idivCtrl;
 	SJA1105P_miixClockControlRegisterArgument_t miixClkCtrl, rgmiixClkCtrl;
 
-	for (port=0; port<SJA1105_PORT_NB; port++) {
+	for (port=0; port<SJA1105P_PORT_NB; port++) {
 		if (SJA1105P_getPhysicalPort(port, &pport))
 			continue;
 
@@ -286,14 +282,14 @@ static void sja1105_cgu_dump(struct spi_device *spi)
 
 		dev_info(&spi->dev, "CGU-PORT%d:\n", port);
 		dev_info(&spi->dev, "IDIV:      Autoblock=%x, Idiv=by %s, pd=%x\n", idivCtrl.autoblock, (idivCtrl.idiv==SJA1105P_e_idiv_BY_1)?"1":"10", idivCtrl.pd);
-		dev_info(&spi->dev, "MII TXC:   Autoblock=%x, clksrc=%s, pd=%x\n", miixClkCtrl.autoblock,  sja1105_clksrc_to_str(miixClkCtrl.clksrc), miixClkCtrl.pd);
-		dev_info(&spi->dev, "RGMII TXC: Autoblock=%x, clksrc=%s, pd=%x\n", rgmiixClkCtrl.autoblock,  sja1105_clksrc_to_str(rgmiixClkCtrl.clksrc), rgmiixClkCtrl.pd);
+		dev_info(&spi->dev, "MII TXC:   Autoblock=%x, clksrc=%s, pd=%x\n", miixClkCtrl.autoblock,  sja1105p_clksrc_to_str(miixClkCtrl.clksrc), miixClkCtrl.pd);
+		dev_info(&spi->dev, "RGMII TXC: Autoblock=%x, clksrc=%s, pd=%x\n", rgmiixClkCtrl.autoblock,  sja1105p_clksrc_to_str(rgmiixClkCtrl.clksrc), rgmiixClkCtrl.pd);
 	}
 }
 
-static int sja1105_configuration_load(const struct firmware *config_file, struct spi_device *spi)
+static int sja1105p_configuration_load(const struct firmware *config_file, struct spi_device *spi)
 {
-	struct sja1105_context_data *data = spi_get_drvdata(spi);
+	struct sja1105p_context_data *data = spi_get_drvdata(spi);
 	int nb_words;
 	u32 * cfg_data;
 	int remaining_words;
@@ -304,15 +300,15 @@ static int sja1105_configuration_load(const struct firmware *config_file, struct
 	SJA1105P_portStatusMiixArgument_t portStatusMiix;
 
 	/* read back ports configuration */
-	for (i=0; i<SJA1105_PORT_NB; i++) {
+	for (i=0; i<SJA1105P_PORT_NB; i++) {
 		SJA1105P_getPortStatusMiix(&portStatusMiix, i, data->device_select);
 		if (verbosity > 0) dev_info(&spi->dev, "REG_PORT_STATUS(%d): speed=%d phyMode=%d xmiiMode=%d\n", i, portStatusMiix.speed, portStatusMiix.phyMode, portStatusMiix.xmiiMode);
 	}
 
-	if (verbosity > 3) sja1105_cgu_dump(spi);
+	if (verbosity > 3) sja1105p_cgu_dump(spi);
 
 	if (config_file->size == 0) {
-		dev_err(&spi->dev, "Error: SJA1105 Switch configuration is empty\n");
+		dev_err(&spi->dev, "Error: SJA1105P Switch configuration is empty\n");
 		goto err_cfg;
 	}
 
@@ -320,20 +316,20 @@ static int sja1105_configuration_load(const struct firmware *config_file, struct
 	cfg_data = (u32*)config_file->data;
 
 	/* Check that file is actually compatible with chip revision */
-	if (data->sja1105_chip_revision < 0 || data->sja1105_chip_revision >= SJA1105_NB_REV) {
-		dev_err(&spi->dev, "Error: SJA1105 unhandled revision\n");
+	if (data->sja1105p_chip_revision < 0 || data->sja1105p_chip_revision >= SJA1105P_NB_REV) {
+		dev_err(&spi->dev, "Error: SJA1105P unhandled revision\n");
 		goto err_cfg;
 	}
 
 	val = cfg_data[0];
-	if (val ==__builtin_bswap32(device_id_list[data->sja1105_chip_revision]) ) {
+	if (val ==__builtin_bswap32(device_id_list[data->sja1105p_chip_revision]) ) {
 		dev_err(&spi->dev, "Config file requires swap, incorrect endianness\n");
 		swap_required = true;
 	}
-	else if (val == device_id_list[data->sja1105_chip_revision])
+	else if (val == device_id_list[data->sja1105p_chip_revision])
 		swap_required = false;
 	else {
-		dev_err(&spi->dev, "Error: SJA1105 unhandled revision Switch incompatible configuration file (%x - %x)\n", val, device_id_list[data->sja1105_chip_revision]);
+		dev_err(&spi->dev, "Error: SJA1105P unhandled revision Switch incompatible configuration file (%x - %x)\n", val, device_id_list[data->sja1105p_chip_revision]);
 		goto err_cfg;
 	}
 
@@ -346,30 +342,30 @@ static int sja1105_configuration_load(const struct firmware *config_file, struct
 	}
 
 	INIT_LIST_HEAD(&data->cfg_block_list);
-	sja1105_config_file_split_blocks(spi, &data->cfg_block_list, cfg_data, nb_words, verbosity);
+	sja1105p_config_file_split_blocks(spi, &data->cfg_block_list, cfg_data, nb_words, verbosity);
 	if (list_empty(&data->cfg_block_list)) {
-		dev_err(&spi->dev, "SJA1105 error parsing configuration file\n");
+		dev_err(&spi->dev, "SJA1105P error parsing configuration file\n");
 		goto err_cfg;
 	}
 
-	if (sja1105_config_avb_param_check(spi, data) < 0) {
-		dev_err(&spi->dev, "SJA1105 failed to get net device!\n");
+	if (sja1105p_config_avb_param_check(spi, data) < 0) {
+		dev_err(&spi->dev, "SJA1105P failed to get net device!\n");
 		goto err_cfg;
 	}
 
-	if (verbosity > 1) dev_info(&spi->dev, "swap_required %d nb_words %d dev_addr %08x\n", swap_required, nb_words, (u32)SJA1105_CONFIG_START_ADDRESS);
+	if (verbosity > 1) dev_info(&spi->dev, "swap_required %d nb_words %d dev_addr %08x\n", swap_required, nb_words, (u32)SJA1105P_CONFIG_START_ADDRESS);
 
 	remaining_words = nb_words;
-	dev_addr = SJA1105_CONFIG_START_ADDRESS;
+	dev_addr = SJA1105P_CONFIG_START_ADDRESS;
 
 	i = 0;
 	while (remaining_words > 0) {
-		//TODO: should use SJA1105_CONFIG_WORDS_PER_BLOCK many words per transfer
+		//TODO: should use SJA1105P_CONFIG_WORDS_PER_BLOCK many words per transfer
 		int block_size_words = MIN(SPI_CFG_BLOCKS, remaining_words);
 
 		if (verbosity > 2) dev_info(&spi->dev, "block_size_words %d remaining_words %d\n", block_size_words, remaining_words);
 
-		if (sja1105_cfg_block_write(spi, dev_addr, cfg_data, block_size_words) < 0)
+		if (sja1105p_cfg_block_write(spi, dev_addr, cfg_data, block_size_words) < 0)
 			goto err_cfg;
 
 		if (verbosity > 1) dev_info(&spi->dev, "Loaded block %d @%08x\n", i, dev_addr);
@@ -380,22 +376,24 @@ static int sja1105_configuration_load(const struct firmware *config_file, struct
 		i++;
 	}
 
-	if (!sja1105_post_cfg_load_check(spi, data))  {
-		dev_err(&spi->dev, "SJA1105 configuration failed\n");
+	if (!sja1105p_post_cfg_load_check(spi, data))  {
+		dev_err(&spi->dev, "SJA1105P configuration failed\n");
 		goto err_cfg;
 	}
 
 	/* read back ports configuration */
-	for (i=0; i<SJA1105_PORT_NB; i++) {
+	for (i=0; i<SJA1105P_PORT_NB; i++) {
 		SJA1105P_getPortStatusMiix(&portStatusMiix, i, data->device_select);
 		if (verbosity > 0) dev_info(&spi->dev, "REG_PORT_STATUS(%d): speed=%d phyMode=%d xmiiMode=%d\n", i, portStatusMiix.speed, portStatusMiix.phyMode, portStatusMiix.xmiiMode);
 	}
 
-	if (verbosity > 3) sja1105_cgu_dump(spi);
+	if (verbosity > 3) sja1105p_cgu_dump(spi);
 
-	read_lock(&rwlock);
-	dev_info(&spi->dev, "SJA1105 (number %d) successfully configured!\n", switches_active);
-	read_unlock(&rwlock);
+	if (verbosity > 0)  {
+		read_lock(&rwlock);
+		dev_info(&spi->dev, "SJA1105P (number %d) successfully configured!\n", switches_active);
+		read_unlock(&rwlock);
+	}
 
 	/*
 	* Don't forget to release the firmware again
@@ -410,9 +408,9 @@ err_cfg:
 }
 
 
-static int sja1105_init_dt(struct sja1105_context_data *switch_ctx)
+static int sja1105p_init_dt(struct sja1105p_context_data *switch_ctx)
 {
-	struct sja1105_platform_data *pdata;
+	struct sja1105p_platform_data *pdata;
 	struct device_node *np = switch_ctx->of_node;
 	u32 val;
 	struct device_node * port_node;
@@ -436,8 +434,8 @@ static int sja1105_init_dt(struct sja1105_context_data *switch_ctx)
 		switch_ctx->fw_name[0] = '\0';
 	}
 
-	pdata->host_port_id = SJA1105_PORT_NB;
-	for (i = 0; i < SJA1105_PORT_NB; i++) {
+	pdata->host_port_id = SJA1105P_PORT_NB;
+	for (i = 0; i < SJA1105P_PORT_NB; i++) {
 		char str_to_find[32];
 		snprintf(str_to_find, 32, "port-%d", i);
 		port_node = of_find_node_by_name(np, str_to_find);
@@ -460,7 +458,7 @@ static int sja1105_init_dt(struct sja1105_context_data *switch_ctx)
 			if (verbosity > 0) dev_info(&switch_ctx->spi_dev->dev, "port-%d is-host=%d\n", i, val);
 			if (val != 0) {
 				pdata->ports[i].is_host = true;
-				if (pdata->host_port_id == SJA1105_PORT_NB)
+				if (pdata->host_port_id == SJA1105P_PORT_NB)
 					pdata->host_port_id = i;
 				else {
 					dev_err(&switch_ctx->spi_dev->dev, "Only one port can be Host Port (management)" "port-%d current is port-%d\n", i, pdata->host_port_id);
@@ -486,12 +484,12 @@ err_dt:
 	return -EINVAL;
 }
 
-void sja1105_port_mapping(struct sja1105_context_data *switch_ctx)
+void sja1105p_port_mapping(struct sja1105p_context_data *switch_ctx)
 {
 	int pport;
-	struct sja1105_platform_data *pdata = switch_ctx->pdata;
+	struct sja1105p_platform_data *pdata = switch_ctx->pdata;
 
-	for (pport = 0; pport < SJA1105_PORT_NB; pport++) {
+	for (pport = 0; pport < SJA1105P_PORT_NB; pport++) {
 		int lport = pdata->ports[pport].logical_port_num;
 		if (lport == -1) {
 			/* if value is is invalid, ie no DT node was found, fall back to auto mapping */
@@ -514,7 +512,7 @@ void sja1105_port_mapping(struct sja1105_context_data *switch_ctx)
 	}
 }
 
-int sja1105_probe_final(struct sja1105_context_data *switch_ctx)
+int sja1105p_probe_final(struct sja1105p_context_data *switch_ctx)
 {
 	int err;
 
@@ -526,7 +524,7 @@ int sja1105_probe_final(struct sja1105_context_data *switch_ctx)
 
 	err = SJA1105P_synchSwitchConfiguration();
 	if (err) {
-		dev_err(&switch_ctx->spi_dev->dev, "SJA1105 config sync failed\n");
+		dev_err(&switch_ctx->spi_dev->dev, "SJA1105P config sync failed\n");
 		return err;
 	}
 
@@ -542,36 +540,34 @@ int sja1105_probe_final(struct sja1105_context_data *switch_ctx)
 	/* perform autoconfiguration for each port */
 	err = SJA1105P_autoConfigPorts();
 	if (err) {
-		dev_err(&switch_ctx->spi_dev->dev, "SJA1105 port autoconfiguration failed\n");
+		dev_err(&switch_ctx->spi_dev->dev, "SJA1105P port autoconfiguration failed\n");
 		return err;
 	}
 
-	if (verbosity > 0) {
-		read_lock(&rwlock);
-		dev_info(&switch_ctx->spi_dev->dev, "%d switch%s initialized successfully!\n", switches_active, (switches_active > 1)?"es":"");
-		read_unlock(&rwlock);
-	}
+	read_lock(&rwlock);
+	dev_info(&switch_ctx->spi_dev->dev, "%d switch%s initialized successfully!\n", switches_active, (switches_active > 1)?"es":"");
+	read_unlock(&rwlock);
 
 	/* only init switchdev, if all switches were detected and initialized correctly */
 	if (enable_switchdev)
-		nxp_swdev_init(sja1105_cotext_arr);
+		nxp_swdev_init(sja1105p_context_arr);
 
 	return 0;
 }
 
-static int sja1105_probe(struct spi_device *spi)
+static int sja1105p_probe(struct spi_device *spi)
 {
-	struct sja1105_context_data *switch_ctx;
+	struct sja1105p_context_data *switch_ctx;
 	int err;
 	const struct of_device_id *match;
-	const struct firmware *sja1105_firmware;
+	const struct firmware *sja1105p_firmware;
 	int fw_idx;
 
-	dev_info(&spi->dev, "Loading SJA1105 SPI driver\n");
+	dev_info(&spi->dev, "Loading SJA1105P SPI driver\n");
 
-	switch_ctx = devm_kzalloc(&spi->dev, sizeof(struct sja1105_context_data), GFP_KERNEL);
+	switch_ctx = devm_kzalloc(&spi->dev, sizeof(struct sja1105p_context_data), GFP_KERNEL);
 	if (!switch_ctx) {
-		dev_err(&spi->dev, "Memory allocation for sja1105_context_data failed\n");
+		dev_err(&spi->dev, "Memory allocation for sja1105p_context_data failed\n");
 		return -ENOMEM;
 	}
 
@@ -580,7 +576,7 @@ static int sja1105_probe(struct spi_device *spi)
 	if (verbosity > 0) dev_info(&spi->dev, "Probing switch number %d\n", switch_ctx->device_select);
 	read_unlock(&rwlock);
 
-	sja1105_cotext_arr[switch_ctx->device_select] = switch_ctx;
+	sja1105p_context_arr[switch_ctx->device_select] = switch_ctx;
 
 	switch_ctx->spi_dev = spi;
 	/* SCLK held low between frames Data latched on second clock edge
@@ -589,36 +585,36 @@ static int sja1105_probe(struct spi_device *spi)
 	spi->bits_per_word = SPI_BITS_PER_WORD;
 	spi->max_speed_hz = max_hz;
 
-	if (verbosity > 1) dev_info(&spi->dev, "SJA1105 SPI Clock set to %dHz, bits per word set to %d\n", max_hz, SPI_BITS_PER_WORD);
+	if (verbosity > 1) dev_info(&spi->dev, "SJA1105P SPI Clock set to %dHz, bits per word set to %d\n", max_hz, SPI_BITS_PER_WORD);
 
 	err = spi_setup(spi);
 	if (err < 0) {
-		dev_err(&spi->dev, "SJA1105 SPI Setup failed err=%d\n", err);
+		dev_err(&spi->dev, "SJA1105P SPI Setup failed err=%d\n", err);
 		return err;
 	}
 
 	switch_ctx->of_node = spi->dev.of_node;
 	if (!switch_ctx->of_node) {
-		dev_err(&spi->dev, "SJA1105 error DTS OF mode mandatory\n");
+		dev_err(&spi->dev, "SJA1105P error DTS OF mode mandatory\n");
 		return -ENODEV;
 	}
 
-	match = of_match_device(sja1105_dt_ids, &spi->dev);
+	match = of_match_device(sja1105p_dt_ids, &spi->dev);
 	if (!match) {
-		dev_err(&spi->dev, "SJA1105 error no matching DTS node was found\n");
+		dev_err(&spi->dev, "SJA1105P error no matching DTS node was found\n");
 		return -ENODEV;
 	}
-	if (verbosity > 1) dev_info(&spi->dev, "Found a matching DT entry (type %llu)\n", (uint64_t)match->data);
+	if (verbosity > 1) dev_info(&spi->dev, "Found a matching DT entry (type %lu)\n", (long unsigned)match->data);
 
-	fw_idx = (uint64_t)match->data;
+	fw_idx = (long unsigned)match->data;
 	if (fw_idx < 0 || fw_idx >= NUM_DT_ENTRIES) {
-		dev_err(&spi->dev, "SJA1105 Bad device table contents\n");
+		dev_err(&spi->dev, "SJA1105P Bad device table contents\n");
 		return -EINVAL;
 	}
 
-	err = sja1105_init_dt(switch_ctx);
+	err = sja1105p_init_dt(switch_ctx);
 	if (err) {
-		dev_err(&spi->dev, "SJA1105 error initializing device table\n");
+		dev_err(&spi->dev, "SJA1105P error initializing device table\n");
 		return err;
 	}
 
@@ -627,43 +623,43 @@ static int sja1105_probe(struct spi_device *spi)
 	register_spi_callback(spi, switch_ctx->device_select, switches_active);
 	read_unlock(&rwlock);
 
-	switch_ctx->sja1105_chip_revision = sja1105_check_device_id(spi, switch_ctx->device_select, 1);
-	if (switch_ctx->sja1105_chip_revision < 0 ) {
-		dev_err(&spi->dev, "SJA1105 SPI Failed to read Device Id\n");
+	switch_ctx->sja1105p_chip_revision = sja1105p_check_device_id(spi, switch_ctx->device_select, 1);
+	if (switch_ctx->sja1105p_chip_revision < 0 ) {
+		dev_err(&spi->dev, "SJA1105P SPI Failed to read Device Id\n");
 		return -ENODEV;
-	} else if (switch_ctx->sja1105_chip_revision >  SJA1105_NB_REV) {
-		dev_err(&spi->dev, "SJA1105 SPI unsupported version\n");
+	} else if (switch_ctx->sja1105p_chip_revision >  SJA1105P_NB_REV) {
+		dev_err(&spi->dev, "SJA1105P SPI unsupported version\n");
 		return -ENODEV;
 	}
 
 	/* If Firmware name was not found in DT, compile a generic name */
 	if (strcmp (switch_ctx->fw_name, "") == 0) {
 		snprintf(switch_ctx->fw_name, 63, "%s_%d-%d_cfg%s.bin",
-		product_names[fw_idx], switch_ctx->device_select+1, SJA1105P_N_SWITCHES, fw_name_suffix[switch_ctx->sja1105_chip_revision]);
+		product_names[fw_idx], switch_ctx->device_select+1, SJA1105P_N_SWITCHES, fw_name_suffix[switch_ctx->sja1105p_chip_revision]);
 	}
 
 	spi_set_drvdata(spi, switch_ctx);
 
-	/* First of all need to check for SJA1105 init read */
-	if (verbosity > 0) dev_info(&spi->dev, "SJA1105 switch preparing to load %s\n", switch_ctx->fw_name);
+	/* First of all need to check for SJA1105P init read */
+	if (verbosity > 0) dev_info(&spi->dev, "SJA1105P switch preparing to load %s\n", switch_ctx->fw_name);
 
-	err = request_firmware(&sja1105_firmware, switch_ctx->fw_name, &spi->dev);
-	if (err || !sja1105_firmware) {
+	err = request_firmware(&sja1105p_firmware, switch_ctx->fw_name, &spi->dev);
+	if (err || !sja1105p_firmware) {
 		dev_err(&spi->dev, "Firmware request failed with %d!\n", err);
 		return err;
 	} else {
-		if (verbosity) dev_info(&spi->dev, "SJA1105 switch firmware request succeeded\n");
+		if (verbosity) dev_info(&spi->dev, "SJA1105P switch firmware request succeeded\n");
 	}
 
-	err = sja1105_configuration_load(sja1105_firmware, spi);
+	err = sja1105p_configuration_load(sja1105p_firmware, spi);
 	if (err) {
 		dev_err(&spi->dev, "Firmware loading failed with %d!\n", err);
 		return err;
 	}
 
-	sja1105_port_mapping(switch_ctx);
+	sja1105p_port_mapping(switch_ctx);
 
-	sja1105_debugfs_init(switch_ctx);
+	sja1105p_debugfs_init(switch_ctx);
 
 	/* Keep track of the total number of switches that were probed */
 	write_lock(&rwlock);
@@ -673,7 +669,7 @@ static int sja1105_probe(struct spi_device *spi)
 	read_lock(&rwlock);
 	if(switches_active == SJA1105P_N_SWITCHES) {
 		read_unlock(&rwlock);
-		sja1105_probe_final(switch_ctx);
+		sja1105p_probe_final(switch_ctx);
 	} else {
 		read_unlock(&rwlock);
 	}
@@ -681,7 +677,7 @@ static int sja1105_probe(struct spi_device *spi)
 	return err;
 }
 
-static int sja1105_remove(struct spi_device *spi)
+static int sja1105p_remove(struct spi_device *spi)
 {
 	/* Keep track of the total number of switches that were probed */
 	write_lock(&rwlock);
@@ -692,39 +688,39 @@ static int sja1105_remove(struct spi_device *spi)
 	unregister_spi_callback(switches_active);
 	read_unlock(&rwlock);
 
-	sja1105_debugfs_remove(spi_get_drvdata(spi));
+	sja1105p_debugfs_remove(spi_get_drvdata(spi));
 
 	return 0;
 }
 
 
 
-static struct spi_driver sja1105_driver = {
+static struct spi_driver sja1105p_driver = {
 	.driver = {
-		.name = "sja1105",
+		.name = "sja1105pqrs",
 		.owner = THIS_MODULE,
-		.of_match_table = sja1105_dt_ids,
+		.of_match_table = sja1105p_dt_ids,
 		.pm = NULL,
 	},
-	.probe = sja1105_probe,
-	.remove = sja1105_remove,
+	.probe = sja1105p_probe,
+	.remove = sja1105p_remove,
 };
 
-static int __init sja1105_driver_init(void)
+static int __init sja1105p_driver_init(void)
 {
-	return spi_register_driver( &sja1105_driver );
+	return spi_register_driver( &sja1105p_driver );
 }
-module_init(sja1105_driver_init);
+module_init(sja1105p_driver_init);
 
-static void __exit sja1105_driver_exit(void)
+static void __exit sja1105p_driver_exit(void)
 {
 	if (enable_switchdev)
 		nxp_swdev_exit();
 
-	spi_unregister_driver( &sja1105_driver );
+	spi_unregister_driver( &sja1105p_driver );
 }
-module_exit(sja1105_driver_exit);
+module_exit(sja1105p_driver_exit);
 
-MODULE_DESCRIPTION("SJA1105 SPI driver");
+MODULE_DESCRIPTION("SJA1105PQRS SPI driver");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("spi:sja1105");
+MODULE_ALIAS("spi:sja1105pqrs");

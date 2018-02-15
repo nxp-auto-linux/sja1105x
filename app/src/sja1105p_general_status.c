@@ -18,7 +18,7 @@
 */
 /**
 *
-* \file sja1105_general_status.c
+* \file sja1105p_general_status.c
 *
 * \author Laurent Brando
 *
@@ -28,7 +28,7 @@
 *
 *****************************************************************************/
 
-#include "sja1105_general_status.h"
+#include "sja1105p_general_status.h"
 #include "NXP_SJA1105P_switchCore.h"
 
 /******************************************************************************

@@ -18,21 +18,21 @@
 */
 /**
 *
-* \file sja1105_debugfs.h
+* \file sja1105p_debugfs.h
 *
 * \author Philippe guasch, Laurent Brando
 *
 * \date 2017-08-02
 *
-* \brief Functions definitions for SJA1105 debugfs
+* \brief Functions definitions for SJA1105P debugfs
 *
 *****************************************************************************/
-#ifndef _SJA1105_DEBUGFS_H__
-#define _SJA1105_DEBUGFS_H__
+#ifndef _SJA1105P_DEBUGFS_H__
+#define _SJA1105P_DEBUGFS_H__
 
-#include "sja1105_init.h"
+#include "sja1105p_init.h"
 
-void sja1105_debugfs_init(struct sja1105_context_data *ctx_data);
-void sja1105_debugfs_remove(struct sja1105_context_data *ctx_data);
+void sja1105p_debugfs_init(struct sja1105p_context_data *ctx_data);
+void sja1105p_debugfs_remove(struct sja1105p_context_data *ctx_data);
 
-#endif /* _SJA1105_DEBUGFS_H__ */
+#endif /* _SJA1105P_DEBUGFS_H__ */

@@ -1,20 +1,26 @@
-Propertie of the sja1105p node:
+Ethernet phy node:
+-----------------
+The Ethernet Phy nodes need to have a label, so they can be referenced from the sja1105p node.
+For example "phy0: ethernet-phy@8" (see doc/example_DT/ethernet_phys.dts): Phy at address 8 can be referenced by its label "phy0"
+
+
+Properties of the sja1105p node:
 ------------------------------------
 
 "compatible"
-	-String that is matched against the of_device_id table "sja1105_dt_ids" in sja1105_init.c. Used to determine the switch type
+	-String that is matched against the of_device_id table "sja1105p_dt_ids" in sja1105p_init.c. Used to determine the switch type
 "firmware_name"
 	-(optional) Name of the firmware (in /lib/firmware) to be loaded for that switch
 "spi-max-frequency"
 	-the max SPI frequency
-"spi-cpol"
+"spi-cpha"
 	-SPI configuration to be used
 "reg"
 	-address of chip select
 
 
 
-Propertie of the port-X child node:
+Properties of the port-X child node:
 ------------------------------------
 
 "is-host"
@@ -23,5 +29,7 @@ Propertie of the port-X child node:
 	-Determines if the port has a phy connected to it or not
 "phy-ref"
 	-phandle to the connected ethernet phy
+	-Must be 0x0 in case there is no phy connected to it (for example a host port or a cascaded port)
 "logical-port-num"
-	-logical port number, used for the portmapping
+	-logical port number, used for the port mapping
+	-Must be 0xff in case the port is a cascaded port (see doc/example_DT/sja1105p_node.dts for an example)
