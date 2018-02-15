@@ -382,7 +382,7 @@ c.deviceid = SJA1105QS_DEVICEID
 c.to_hex(filename)
 
 sw_no = int(filename.split("_")[2][-1]) + 1
-output_bin_filename = "sja1105_cfg_mra2lt_{}-3.bin".format(sw_no)
+output_bin_filename = "sja1105p_{}-3_cfg.bin".format(sw_no)
 
 to_binary_converter = _hex2bin.Hex2BinConverter()
 to_binary_converter.create_bin_file(filename, output_bin_filename, endiannes);
