@@ -64,8 +64,18 @@ modules:
 clean: firmware_clean
 	$(MAKE) ARCH=$(MYARCHITECTURE) CROSS_COMPILE=$(MYTOOLCHAIN) CC=$(MYCOMPILER) -C $(KERNELDIR) M=`pwd` $@
 
+modules_install: firmware_install
+	$(eval KERNEL_VERSION := $(shell cat $(KERNELDIR)/include/config/kernel.release))
+	install -D sja1105pqrs.ko $(INSTALL_DIR)/lib/modules/$(KERNEL_VERSION)/kernel/drivers/spi/sja1105pqrs.ko
+
 firmware:
 	$(MAKE) -C $(FIRMWARE_DIR) BOARD=$(MYPLATFORM) NR_SWITCHES=$(NUMBER_SWITCHES)
+
+firmware_install:
+	@mkdir -p $(INSTALL_DIR)/lib/firmware/
+	@$(foreach SWITCH, $(shell seq 1 $(NUMBER_SWITCHES) ), \
+		install -D $(FIRMWARE_DIR)/sja1105p_$(SWITCH)-$(NUMBER_SWITCHES)_cfg.bin \
+			$(INSTALL_DIR)/lib/firmware/;)
 
 firmware_clean:
 	$(MAKE) -C $(FIRMWARE_DIR) clean
