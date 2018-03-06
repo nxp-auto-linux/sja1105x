@@ -47,6 +47,9 @@
 * EXPORTED FUNCTIONS
 *****************************************************************************/
 
+#define SJA1105P_RESET_CTRL_COLDRESET  (1<<2)
+#define SJA1105P_RESET_CTRL_WARMRESET  (1<<3)
+
 /* register category reset_ctrl */
 extern uint8_t SJA1105P_setResetCtrl(uint16_t rstCtrl, uint8_t deviceSelect);
 
