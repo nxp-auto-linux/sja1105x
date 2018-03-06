@@ -47,6 +47,7 @@
 #include "NXP_SJA1105P_spi.h"
 #include "NXP_SJA1105P_portConfig.h"
 #include "NXP_SJA1105P_cbs.h"
+#include "NXP_SJA1105P_resetGenerationUnit.h"
 
 #include "sja1105p_spi_linux.h"
 #include "sja1105p_cfg_file.h"
@@ -641,6 +642,14 @@ static int sja1105p_probe(struct spi_device *spi)
 	} else if (switch_ctx->sja1105p_chip_revision >  SJA1105P_NB_REV) {
 		dev_err(&spi->dev, "SJA1105P SPI unsupported version\n");
 		return -ENODEV;
+	}
+
+	SJA1105P_setResetCtrl(SJA1105P_RESET_CTRL_COLDRESET, switch_ctx->device_select);
+	err = sja1105p_wait_for_reset(spi, switch_ctx->sja1105p_chip_revision, switch_ctx->device_select);
+	if (err != 0)
+	{
+		dev_err(&spi->dev, "SJA1105P reset failed\n");
+		return err;
 	}
 
 	/* If Firmware name was not found in DT, compile a generic name */
