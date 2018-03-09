@@ -139,6 +139,17 @@ static int sja1105p_check_device_id(struct spi_device *spi, unsigned int device_
 	return val;
 }
 
+static int sja1105p_wait_for_reset(struct spi_device *spi, int revision, int device_select)
+{
+	int count = 0;
+	while (count++ < 30) {
+		if (revision == sja1105p_check_device_id(spi, device_select, 0) ) {
+			return 0;
+		}
+	}
+	return -EIO;
+}
+
 static bool sja1105p_check_device_status(struct spi_device *spi)
 {
 	struct sja1105p_context_data *sw_ctx = spi_get_drvdata(spi);
