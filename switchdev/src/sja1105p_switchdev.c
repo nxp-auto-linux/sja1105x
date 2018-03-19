@@ -21,6 +21,7 @@
 #include <net/switchdev.h>
 #include <net/netlink.h>
 #include <linux/of_mdio.h>
+#include <linux/fec.h>
 
 #include "NXP_SJA1105P_addressResolutionTable.h"
 #include "NXP_SJA1105P_diagnostics.h"
@@ -1050,15 +1051,39 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 	}
 }
 
+static void fec_callback(int status_change, int link)
+{
+	if (link && status_change)
+		SJA1105P_resetClockDelay(0,
+					 0,
+					 SJA1105P_e_direction_RX);
+}
+
+
+static void register_fec(void)
+{
+	fec_set_phy_callback(fec_callback);
+}
+
+static void unregister_fec(void)
+{
+	fec_set_phy_callback(NULL);
+}
+
+
 /* module init function */
 int nxp_swdev_init(struct sja1105p_context_data **ctx_nodes)
 {
 	sja1105p_context_arr = ctx_nodes;
+	
+	register_fec();
+	
 	return register_ports(&nxp_private_data);
 }
 
 /* module exit function */
 void nxp_swdev_exit(void)
 {
+	unregister_fec();
 	unregister_ports(&nxp_private_data);
 }
