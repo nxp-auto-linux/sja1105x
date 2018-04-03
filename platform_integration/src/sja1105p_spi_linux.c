@@ -208,9 +208,16 @@ uint8_t sja1105p_spi_write32(uint8_t deviceSelect, uint8_t wordCount, uint32_t r
 {
 	struct spi_device *spi = g_spi_h[deviceSelect];
 
-	if (verbosity > 5) dev_info(&spi->dev, "%s: device %d wordCount=%d, registerAddress=%08x registerValue=%08x\n", __func__, deviceSelect, wordCount, registerAddress, *p_registerValue);
+#if SPI_CFG_BLOCKS == 1
+	int i;
 
+	for (i = 0; i < wordCount; i++)
+		sja1105p_cfg_block_write(spi, registerAddress+i, p_registerValue+i, 1);
+#else
 	sja1105p_cfg_block_write(spi, registerAddress, p_registerValue, wordCount);
+#endif
+
+	if (verbosity > 5) dev_info(&spi->dev, "%s: device %d wordCount=%d, registerAddress=%08x registerValue=%08x\n", __func__, deviceSelect, wordCount, registerAddress, *p_registerValue);
 
 	return 0;
 }
