@@ -400,6 +400,13 @@ static uint8_t configPort(uint8_t port, uint8_t switchId,  SJA1105P_speed_t spee
 						port,
 						switchId,
 						SJA1105P_e_direction_RX);
+				if (speed == SJA1105P_e_speed_100_MBPS ||
+					speed == SJA1105P_e_speed_10_MBPS)
+					ret += SJA1105P_setCfgPad(true,
+						true,
+						port,
+						switchId,
+						SJA1105P_e_direction_RX);
 			}
 			miixClockControlRegister.clksrc = getClkSrcAtPort(SJA1105P_e_clkSrcCategory_IDIV, port);
 			if (speed != SJA1105P_e_speed_100_MBPS)
