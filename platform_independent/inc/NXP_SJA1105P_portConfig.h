@@ -49,6 +49,7 @@
 *****************************************************************************/
 
 extern uint8_t SJA1105P_autoConfigPorts(void);
+extern uint8_t SJA1105P_reconfigPort(uint8_t port, uint8_t switchId);
 extern uint8_t SJA1105P_setupClockDelay(uint16_t delay, uint8_t port, uint8_t switchId, SJA1105P_direction_t direction);
 extern uint8_t SJA1105P_resetClockDelay(uint8_t port, uint8_t switchId, SJA1105P_direction_t direction);
 extern uint8_t initSgmii(uint8_t switchId, uint8_t autoNegotiation, SJA1105P_speed_t speed, uint8_t phyMode);

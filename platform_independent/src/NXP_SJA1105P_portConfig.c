@@ -318,6 +318,28 @@ extern uint8_t initSgmii(uint8_t switchId, uint8_t autoNegotiation, SJA1105P_spe
 }
 
 /**
+* \brief Automatically configure CGU and ACU setting for a given port.\n
+* This function reads out the port configuration from the ACU.
+* It corresponds to the configuration loaded into the switch core.
+* Consequently, the right CGU and ACU settings are taken.
+*
+* \param[in]  port Port to be configured
+* \param[in]  switchId SwitchId of the port to be configured
+*
+* \return uint8_t Returns 0 upon successful configuration, else failed.
+*/
+uint8_t SJA1105P_reconfigPort(uint8_t port, uint8_t switchId)
+{
+	uint8_t ret = 0;
+	SJA1105P_portStatusMiixArgument_t portStatus;
+
+	ret += SJA1105P_getPortStatusMiix(&portStatus, port, switchId);
+	ret += configPort(port, switchId, portStatus.speed, portStatus.xmiiMode, portStatus.phyMode);
+
+	return ret;
+}
+
+/**
 * \brief Configure speed and xMII mode of a given port.
 *
 * For MII and RMII, PHY and MAC mode can be selected.
