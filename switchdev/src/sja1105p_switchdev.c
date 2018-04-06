@@ -723,6 +723,33 @@ static void nxp_toggle_port(int port_num)
 	}
 }
 
+static void nxp_update_speed(struct phy_device *phy_dev, int port_num)
+{
+	SJA1105P_port_t physicalPort;
+	int spd;
+
+	switch (phy_dev->speed) {
+	case 1000:
+		spd = SJA1105P_e_speed_1_GBPS;
+		break;
+	case 100:
+		spd = SJA1105P_e_speed_100_MBPS;
+		break;
+	case 10:
+		spd = SJA1105P_e_speed_10_MBPS;
+		break;
+	default:
+		pr_err("Unsupported speed %d\n", phy_dev->speed);
+		return;
+	}
+
+	SJA1105P_getPhysicalPort(port_num, &physicalPort);
+	SJA1105P_setSpeed(physicalPort.physicalPort, physicalPort.switchId,
+			  spd);
+
+	SJA1105P_reconfigPort(physicalPort.physicalPort, physicalPort.switchId);
+}
+
 /***************************link_state callback********************************/
 
 // is called on phydev state machine changes
