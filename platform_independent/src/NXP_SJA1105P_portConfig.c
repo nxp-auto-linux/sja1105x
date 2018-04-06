@@ -38,6 +38,8 @@
 
 #include "typedefs.h"
 
+#include <linux/string.h>
+
 #include "NXP_SJA1105P_portConfig.h"
 #include "NXP_SJA1105P_auxiliaryConfigurationUnit.h"
 #include "NXP_SJA1105P_clockGenerationUnit.h"
@@ -313,6 +315,61 @@ extern uint8_t initSgmii(uint8_t switchId, uint8_t autoNegotiation, SJA1105P_spe
 		basicControl.autonegEnable = 1;  /* Enable auto-negotiation */
 		ret += SJA1105P_setBasicControl(&basicControl, switchId);
 	}
+
+	return ret;
+}
+
+
+/**
+* \brief Set the speed for a given port in the MAC CFG Table.
+*
+* \param[in]  port Port to be configured
+* \param[in]  switchId switch at which the delay should be configured
+* \param[in]  speed Speed to be set.
+*
+* \return uint8_t Returns 0 upon successful configuration, else failed.
+*/
+extern uint8_t SJA1105P_setSpeed(uint8_t port, uint8_t switchId, SJA1105P_speed_t speed)
+{
+	SJA1105P_macCfgTableControlArgument_t macCfgTableControl;
+	SJA1105P_macCfgTableEntryArgument_t macCfgTableEntry;
+	int ret = 0;
+
+	/* Set the MAC CFG Control for the given port */
+	memset(&macCfgTableControl, 0, sizeof(SJA1105P_macCfgTableControlArgument_t));
+	memset(&macCfgTableEntry, 0, sizeof(SJA1105P_macCfgTableEntryArgument_t));
+
+	macCfgTableControl.port = port;
+	macCfgTableControl.valid = 1;
+	macCfgTableControl.rdwrset = 0;        /* read */
+
+	ret  = SJA1105P_setMacCfgTableControl(&macCfgTableControl, switchId);
+	ret += SJA1105P_getMacCfgTableEntry(&macCfgTableEntry, switchId);
+
+	if (ret)
+		return ret;
+
+	switch (speed) {
+	/* Values taken from reference manual, MAC Cfg Table section */
+	case SJA1105P_e_speed_10_MBPS:
+		macCfgTableEntry.speed = 3;
+		break;
+	case SJA1105P_e_speed_100_MBPS:
+		macCfgTableEntry.speed = 2;
+		break;
+	case SJA1105P_e_speed_1_GBPS:
+		macCfgTableEntry.speed = 1;
+		break;
+	default:
+		return -1;
+	}
+
+	macCfgTableControl.port = port;
+	macCfgTableControl.valid = 1;
+	macCfgTableControl.rdwrset = 1;        /* write */
+
+	ret += SJA1105P_setMacCfgTableEntry(&macCfgTableEntry, switchId);
+	ret += SJA1105P_setMacCfgTableControl(&macCfgTableControl, switchId);
 
 	return ret;
 }
