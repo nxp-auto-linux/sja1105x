@@ -114,7 +114,7 @@ SPEED_1GBPS = 1
 SPEED_100MBPS = 2
 SPEED_10MBPS = 3
 
-speed = [SPEED_1GBPS, SPEED_1GBPS, SPEED_100MBPS, SPEED_1GBPS, SPEED_1GBPS]
+speed = [SPEED_1GBPS, SPEED_1GBPS, SPEED_100MBPS, SPEED_1GBPS, SPEED_HOST]
 speed_Mbps = [10 ** (4 - x) for x in speed]
 
 default_vlan = 555  #Default VLAN ID on all ports for untagged frames is 0
