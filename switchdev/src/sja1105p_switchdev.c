@@ -48,6 +48,7 @@ struct nxp_port_data_struct {
 	unsigned char *base_mac;
 	struct net_device *netdev;
 	int link_state;
+	int speed;
 };
 
 struct nxp_private_data_struct {
@@ -769,6 +770,11 @@ static void nxp_adjust_link(struct net_device *netdev)
 		if (phydev->link) {
 			/* If we just came up */
 			if (nxp_port->link_state == 0) {
+				if (nxp_port->speed != phydev->speed) {
+					nxp_update_speed(phydev,
+							 nxp_port->port_num);
+					nxp_port->speed = phydev->speed;
+				}
 				nxp_toggle_port(nxp_port->port_num);
 			}
 			nxp_port->link_state = 1;
