@@ -106,6 +106,39 @@ general_parameters.append({
 })
 
 #############################################################################
+# ACU configuration
+#############################################################################
+
+acu_configuration = make_table_by_layout(acu_configuration_table_layout, layoutid_map)
+c.append(acu_configuration)
+# Pull-down the RX_ER pin (and RX_DV) in CFG_PAD_MII2_RX on port 2 to workaround
+# the cross-talk problem with S32R274's TX_ER in BlueBox mini. See field CTRL_IPUD
+# bits 9:8 in Table 122. "Registers CFG_PAD_MIIx_RX" in SJA1105 User Manual UM11040.
+acu_configuration.append({
+    "DISABLE_IF"             : 0x0,
+    "RGMII_MEAS_SETUP"       : 0x0,
+    "TS_CONFIG"              : 0x65,
+    "CFG_PAD_JTAG"           : 0x2000000,
+    "CFG_PAD_SPI"            : 0x12040407,
+    "CFG_PAD_MISC"           : 0x120412,
+    "CFG_PAD_MII4_ID"        : 0x2323,
+    "CFG_PAD_MII3_ID"        : 0x2323,
+    "CFG_PAD_MII2_ID"        : 0x2323,
+    "CFG_PAD_MII1_ID"        : 0x2323,
+    "CFG_PAD_MII0_ID"        : 0x2323,
+    "CFG_PAD_MII4_RX"        : 0x2020212,
+    "CFG_PAD_MII4_TX"        : 0x12121212,
+    "CFG_PAD_MII3_RX"        : 0x2020212,
+    "CFG_PAD_MII3_TX"        : 0x12121212,
+    "CFG_PAD_MII2_RX"        : 0x2020312, # changed reset value 2 to 3
+    "CFG_PAD_MII2_TX"        : 0x12121212,
+    "CFG_PAD_MII1_RX"        : 0x2020212,
+    "CFG_PAD_MII1_TX"        : 0x12121212,
+    "CFG_PAD_MII0_RX"        : 0x2020212,
+    "CFG_PAD_MII0_TX"        : 0x12121212
+})
+
+#############################################################################
 # MAC Configuration Table
 #############################################################################
 
@@ -362,7 +395,7 @@ mii_mode_parameters.append({
     "xMII_MODE[1]"    : RGMII,
     "PHY_MAC[1]"      : MAC_MODE,  # not applicable for RGMII,
     "xMII_MODE[2]"    : MII,
-    "PHY_MAC[2]"      : MAC_MODE,  # not applicable for RGMII,
+    "PHY_MAC[2]"      : PHY_MODE,  # not applicable for RGMII,
     "xMII_MODE[3]"    : RGMII,
     "PHY_MAC[3]"      : MAC_MODE,  # not applicable for RGMII,
     "xMII_MODE[4]"    : RGMII,
