@@ -667,41 +667,19 @@ static int nxp_port_swdev_port_stp_update(struct net_device *netdev, u8 state)
 	return 0;
 }
 
-/* Called to add/modify IPv4 route to switch device */
-static int nxp_port_swdev_fib_ipv4_add(struct net_device *netdev,
-				       __be32 dst, int dst_len,
-				       struct fib_info *fi,
-				       u8 tos, u8 type,
-				       u32 nlflags, u32 tb_id)
+static int nxp_port_obj_add(struct net_device *netdev,
+				const struct switchdev_obj *obj,
+				struct switchdev_trans *trans)
 {
-	struct nxp_port_data_struct *nxp_port;
-	nxp_port = netdev_priv(netdev);
-
-	//TODO implement
-
-	if (verbosity > 3)
-		netdev_alert(netdev, "nxp_port_swdev_fib_ipv4_add was called [%d], IP: [%d.%d.%d.%d]!\n",
-		nxp_port->port_num, (((unsigned char*) &dst)[0]), (((unsigned char*) &dst)[1]), (((unsigned char*) &dst)[2]), (((unsigned char*) &dst)[3]));
-
-	return 0;
+	/* Not implemented */
+	return -EOPNOTSUPP;
 }
 
-/* Called to delete IPv4 route from switch device */
-static int nxp_port_swdev_fib_ipv4_del(struct net_device *netdev,
-					  __be32 dst, int dst_len,
-					  struct fib_info *fi,
-					  u8 tos, u8 type, u32 tb_id)
+static int nxp_port_obj_del(struct net_device *netdev,
+				const struct switchdev_obj *obj)
 {
-	struct nxp_port_data_struct *nxp_port;
-	nxp_port = netdev_priv(netdev);
-
-	//TODO implement
-
-	if (verbosity > 3)
-		netdev_alert(netdev, "nxp_port_swdev_fib_ipv4_del was called [%d], IP: [%d.%d.%d.%d]!\n",
-		nxp_port->port_num, (((unsigned char*) &dst)[0]), (((unsigned char*) &dst)[1]), (((unsigned char*) &dst)[2]), (((unsigned char*) &dst)[3]));
-
-	return 0;
+	/* Not implemented */
+	return -EOPNOTSUPP;
 }
 
 /* Called when ports are toggled to reset delay lines */
@@ -797,8 +775,8 @@ static const struct net_device_ops nxp_port_netdev_ops = {
 static const struct switchdev_ops nxp_port_swdev_ops = {
 	.swdev_parent_id_get		= nxp_port_swdev_parent_id_get,
 	.swdev_port_stp_update		= nxp_port_swdev_port_stp_update,
-	.swdev_fib_ipv4_add		= nxp_port_swdev_fib_ipv4_add,
-	.swdev_fib_ipv4_del		= nxp_port_swdev_fib_ipv4_del,
+	.switchdev_port_obj_add		= nxp_port_obj_add,
+	.switchdev_port_obj_del		= nxp_port_obj_del,
 };
 
 
