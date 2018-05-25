@@ -794,7 +794,7 @@ static const struct net_device_ops nxp_port_netdev_ops = {
 };
 
 /**********************************sw_ops**************************************/
-static const struct swdev_ops nxp_port_swdev_ops = {
+static const struct switchdev_ops nxp_port_swdev_ops = {
 	.swdev_parent_id_get		= nxp_port_swdev_parent_id_get,
 	.swdev_port_stp_update		= nxp_port_swdev_port_stp_update,
 	.swdev_fib_ipv4_add		= nxp_port_swdev_fib_ipv4_add,
