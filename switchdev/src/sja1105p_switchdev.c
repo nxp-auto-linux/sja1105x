@@ -232,7 +232,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 			     struct netlink_callback *cb,
 			     struct net_device *netdev,
 			     struct net_device *filter_dev,
-			     int idx)
+			     int *idx)
 {
 	int vid;
 	char *mac_addr;
@@ -244,7 +244,7 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 
 	if (verbosity > 1)
 		netdev_alert(netdev, "nxp_port_fdb_dump was called (%d)! idx [%d], arg is [%ld]%s\n",
-		nxp_port->port_num, idx, cb->args[0], ((idx < cb->args[0])?" (skipping)":""));
+		nxp_port->port_num, *idx, cb->args[0], ((*idx < cb->args[0])?" (skipping)":""));
 
 	for (index = 0; index < ARL_TABLE_SIZE; index++) {
 		SJA1105P_addressResolutionTableEntry_t entry;
@@ -269,8 +269,8 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 		 * of entries for all devices,
 		 * idx must still be incremented per valid table entry.
 		 */
-		if (idx < cb->args[0]) {
-			idx++;
+		if (*idx < cb->args[0]) {
+			*idx += 1;
 			continue;
 		}
 
@@ -291,10 +291,10 @@ static int nxp_port_fdb_dump(struct sk_buff *skb,
 		if (err)
 			goto send_error;
 
-		idx++;
+		*idx += 1;
 	}
 
-	return idx;
+	return 0;
 
 sja1105p_read_error:
 	netdev_err(netdev, "Could not read table entry from sja1105p!\n");
