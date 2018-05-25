@@ -765,7 +765,7 @@ static void nxp_adjust_link(struct net_device *netdev)
 	if (phydev) {
 		if (verbosity > 3)
 			netdev_alert(netdev, "nxp_adjust_link was called for %s: phy [%x]: state: [%x], link [%x]\n",
-			netdev->name, phydev->addr, phydev->state, phydev->link);
+			netdev->name, phydev->mdio.addr, phydev->state, phydev->link);
 
 		if (phydev->link) {
 			/* If we just came up */
@@ -912,7 +912,7 @@ void attach_phydev(struct net_device *netdev)
 
 	if (verbosity > 0)
 		netdev_alert(netdev, "connected phy [%x] (state: [%x], link [%x]) to port [%d], attached_dev [%s]\n",
-			phydev->addr, phydev->state, phydev->link, nxp_port->port_num, (phydev->attached_dev)?phydev->attached_dev->name:"none");
+			phydev->mdio.addr, phydev->state, phydev->link, nxp_port->port_num, (phydev->attached_dev)?phydev->attached_dev->name:"none");
 
 	return;
 
@@ -1075,7 +1075,7 @@ void unregister_ports(struct nxp_private_data_struct *pr_data)
 			/* decrement the refcount,
 			 * that was incremented by of_phy_find_device
 			 */
-			put_device(&phydev->dev);
+			put_device(&phydev->mdio.dev);
 		}
 
 		if (verbosity > 0)
