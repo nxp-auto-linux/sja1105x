@@ -350,8 +350,8 @@ static void set_port_linkstatus(struct net_device *netdev, linkstatus_t s)
 		rtnl_unlock();
 }
 
-struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
-					struct rtnl_link_stats64 *storage)
+void nxp_get_stats(struct net_device *netdev,
+			struct rtnl_link_stats64 *storage)
 {
 	int err;
 	uint64_t tx_bytes, tx_packets, rx_bytes, rx_packets;
@@ -517,11 +517,9 @@ struct rtnl_link_stats64* nxp_get_stats(struct net_device *netdev,
 		qfull, polerr, vlanerr, n664err);
 	}
 
-	return storage;
 
 sja1105p_read_error:
 	netdev_err(netdev, "Could not read stats from sja1105p!\n");
-	return storage;
 }
 
 /* this function is called when a VLAN id is registered */
