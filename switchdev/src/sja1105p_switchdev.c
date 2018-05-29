@@ -678,6 +678,19 @@ static int nxp_port_attr_get(struct net_device *netdev,
 	}
 }
 
+static int nxp_port_attr_set(struct net_device *netdev,
+			     const struct switchdev_attr *attr,
+			     struct switchdev_trans *trans)
+{
+	switch (attr->id) {
+	case SWITCHDEV_ATTR_ID_PORT_STP_STATE:
+		return nxp_port_swdev_port_stp_update(netdev,
+						      attr->u.stp_state);
+	default:
+		return -EOPNOTSUPP;
+	}
+}
+
 static int nxp_port_obj_add(struct net_device *netdev,
 				const struct switchdev_obj *obj,
 				struct switchdev_trans *trans)
@@ -785,7 +798,7 @@ static const struct net_device_ops nxp_port_netdev_ops = {
 /**********************************sw_ops**************************************/
 static const struct switchdev_ops nxp_port_swdev_ops = {
 	.switchdev_port_attr_get	= nxp_port_attr_get,
-	.swdev_port_stp_update		= nxp_port_swdev_port_stp_update,
+	.switchdev_port_attr_set	= nxp_port_attr_set,
 	.switchdev_port_obj_add		= nxp_port_obj_add,
 	.switchdev_port_obj_del		= nxp_port_obj_del,
 };
