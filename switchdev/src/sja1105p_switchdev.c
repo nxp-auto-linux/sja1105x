@@ -1016,7 +1016,6 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 		*/
 		//TODO taken from rocker: recheck, possibly expand
 		netdev->features |= NETIF_F_NETNS_LOCAL |
-				    NETIF_F_HW_SWITCH_OFFLOAD |
 				    NETIF_F_VLAN_FEATURES;
 
 		//TODO set priv_flags
