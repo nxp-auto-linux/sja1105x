@@ -1004,7 +1004,7 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 
 		/* populate netdev */
 		netdev->netdev_ops = &nxp_port_netdev_ops;
-		netdev->swdev_ops = &nxp_port_swdev_ops;
+		SWITCHDEV_SET_OPS(netdev, &nxp_port_swdev_ops);
 
 
 		/* Flags:
