@@ -1021,6 +1021,8 @@ int register_ports(struct nxp_private_data_struct *pr_data)
 
 		//TODO set priv_flags
 
+		SET_NETDEV_DEV(netdev, &spidev->dev);
+
 		/* bind a phydev to the netdev */
 		attach_phydev(netdev);
 
