@@ -517,6 +517,7 @@ void nxp_get_stats(struct net_device *netdev,
 		qfull, polerr, vlanerr, n664err);
 	}
 
+	return;
 
 sja1105p_read_error:
 	netdev_err(netdev, "Could not read stats from sja1105p!\n");
