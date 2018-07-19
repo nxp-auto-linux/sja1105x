@@ -48,6 +48,7 @@
 * EXPORTED FUNCTIONS
 *****************************************************************************/
 
+extern uint8_t SJA1105P_setCfgPad(uint8_t pd, bool bypass, uint8_t port, uint8_t switchId, SJA1105P_direction_t direction);
 extern uint8_t SJA1105P_autoConfigPorts(void);
 extern uint8_t SJA1105P_setSpeed(uint8_t port, uint8_t device, SJA1105P_speed_t speed);
 extern uint8_t SJA1105P_reconfigPort(uint8_t port, uint8_t switchId);

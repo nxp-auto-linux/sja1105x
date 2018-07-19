@@ -750,6 +750,17 @@ static void nxp_update_speed(struct phy_device *phy_dev, int port_num)
 			  spd);
 
 	SJA1105P_reconfigPort(physicalPort.physicalPort, physicalPort.switchId);
+
+	/*
+	 * The connection is unstable if the internal delay line of port
+	 * 4 is enabled. The above call to SJA1105P_reconfigPort() enables
+	 * the delay line of the port it reconfigures, therefore we have
+	 * to disable it again.
+	 */
+	if (physicalPort.switchId == 0 && physicalPort.physicalPort == 4) {
+		SJA1105P_setCfgPad(1, true, 4, 0, SJA1105P_e_direction_RX);
+		SJA1105P_setCfgPad(1, true, 4, 0, SJA1105P_e_direction_TX);
+	}
 }
 
 /***************************link_state callback********************************/

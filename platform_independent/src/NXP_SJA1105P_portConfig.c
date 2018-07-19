@@ -85,7 +85,6 @@ typedef struct
 *****************************************************************************/
 
 static uint8_t configPort(uint8_t port, uint8_t switchId, SJA1105P_speed_t speed, SJA1105P_xmiiMode_t xmiiMode, uint8_t phyMode);
-static uint8_t SJA1105P_setCfgPad(uint8_t pd, bool bypass, uint8_t port, uint8_t switchId, SJA1105P_direction_t direction);
 static uint8_t makeTxPinsHighSpeed(uint8_t port, uint8_t switchId);
 static uint8_t enablePLL1(uint8_t switchId);
 static SJA1105P_clksrc_t getClkSrcAtPort(clkSrcCategory_t clkSrcCategory, uint8_t port);
@@ -133,7 +132,7 @@ extern uint8_t SJA1105P_autoConfigPorts(void)
 *
 * \return uint8_t Returns 0 upon successful configuration, else non-zero.
 */
-static uint8_t SJA1105P_setCfgPad(uint8_t pd, bool bypass, uint8_t port, uint8_t switchId, SJA1105P_direction_t direction)
+uint8_t SJA1105P_setCfgPad(uint8_t pd, bool bypass, uint8_t port, uint8_t switchId, SJA1105P_direction_t direction)
 {
 	uint8_t ret;
 	SJA1105P_cfgPadMiixIdArgument_t cfgPadMiixId;
