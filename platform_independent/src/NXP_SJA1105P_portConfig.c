@@ -215,6 +215,7 @@ extern uint8_t SJA1105P_resetClockDelay(uint8_t port, uint8_t switchId, SJA1105P
 {
 	uint8_t ret;
 	SJA1105P_cfgPadMiixIdArgument_t cfgPadMiixId;
+	uint8_t initial_pd, initial_bypass;
 
 	ret = SJA1105P_getCfgPadMiixId(&cfgPadMiixId, port, switchId);
 	if (ret != 0U)
@@ -222,11 +223,15 @@ extern uint8_t SJA1105P_resetClockDelay(uint8_t port, uint8_t switchId, SJA1105P
 
 	if (direction == SJA1105P_e_direction_TX)
 	{
+		initial_pd = cfgPadMiixId.txcPd;
+		initial_bypass = cfgPadMiixId.txcBypass;
 		cfgPadMiixId.txcPd = 1;
 		cfgPadMiixId.txcBypass = 1;
 	}
 	else
 	{
+		initial_pd = cfgPadMiixId.rxcPd;
+		initial_bypass = cfgPadMiixId.rxcBypass;
 		cfgPadMiixId.rxcPd = 1;
 		cfgPadMiixId.rxcBypass = 1;
 	}
@@ -235,13 +240,13 @@ extern uint8_t SJA1105P_resetClockDelay(uint8_t port, uint8_t switchId, SJA1105P
 
 	if (direction == SJA1105P_e_direction_TX)
 	{
-		cfgPadMiixId.txcPd = 0;
-		cfgPadMiixId.txcBypass = 0;
+		cfgPadMiixId.txcPd = initial_pd;
+		cfgPadMiixId.txcBypass = initial_bypass;
 	}
 	else
 	{
-		cfgPadMiixId.rxcPd = 0;
-		cfgPadMiixId.rxcBypass = 0;
+		cfgPadMiixId.rxcPd = initial_pd;
+		cfgPadMiixId.rxcBypass = initial_bypass;
 	}
 
 	ret = SJA1105P_setCfgPadMiixId(&cfgPadMiixId, port, switchId);
