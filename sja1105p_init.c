@@ -1,6 +1,8 @@
 /*
 * AVB switch driver module for SJA1105
-* Copyright (C) 2016 - 2018 NXP Semiconductors
+* Copyright (C) 2016 - 2017 NXP Semiconductors
+*
+* Copyright 2018 NXP
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -135,7 +137,7 @@ static int sja1105p_check_device_id(struct spi_device *spi, unsigned int device_
 	}
 
 	if (val == -1)
-		dev_err(&spi->dev, "SJA1105P invalid Device Id, is %08x\n", devid);
+		dev_info(&spi->dev, "Detected device id is invalid: %08x\n", devid);
 
 	return val;
 }
