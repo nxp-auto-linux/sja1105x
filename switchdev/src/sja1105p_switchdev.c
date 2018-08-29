@@ -322,6 +322,12 @@ static int nxp_port_get_phys_port_name(struct net_device *netdev,
 	return 0;
 }
 
+static netdev_tx_t sja1105x_ndo_start_xmit(struct sk_buff *skb,
+					   struct net_device *dev)
+{
+	return NETDEV_TX_OK;
+}
+
 static void set_port_linkstatus(struct net_device *netdev, linkstatus_t s)
 {
 	int needlock, flags;
@@ -798,6 +804,7 @@ static void nxp_adjust_link(struct net_device *netdev)
 
 /**********************************nw_ops**************************************/
 static const struct net_device_ops nxp_port_netdev_ops = {
+	.ndo_start_xmit			= sja1105x_ndo_start_xmit,
 	.ndo_fdb_add			= nxp_port_fdb_add,
 	.ndo_fdb_del			= nxp_port_fdb_del,
 	.ndo_fdb_dump			= nxp_port_fdb_dump,
