@@ -10,7 +10,7 @@ MYPLATFORM=bbmini
 
 
 ifeq ($(MYPLATFORM), imx)
-	#i.MX
+	# i.MX
 	NUMBER_SWITCHES ?= 1
 	SPI_FREQ ?= 25000000
 	SPI_SWAP ?= 0
@@ -23,7 +23,7 @@ ifeq ($(MYPLATFORM), imx)
 	MYCOMPILER=arm-linux-gnueabi-gcc-4.7
 	KERNELDIR ?= /home/marco/Documents/linux_automotive/linux_avb
 else ifeq ($(MYPLATFORM), evb)
-	#evb
+	# S32V234-EVB
 	NUMBER_SWITCHES ?= 2
 	SPI_FREQ ?= 12000000
 	SPI_SWAP ?= 1
@@ -36,7 +36,7 @@ else ifeq ($(MYPLATFORM), evb)
 	MYCOMPILER=aarch64-linux-gnu-gcc
 	KERNELDIR ?= ~/work/linux
 else ifeq ($(MYPLATFORM), bbmini)
-	#bbmini
+	# S32V234 BlueBox Mini
 	NUMBER_SWITCHES ?= 3
 	SPI_FREQ ?= 12000000
 	SPI_SWAP ?= 1
@@ -48,6 +48,18 @@ else ifeq ($(MYPLATFORM), bbmini)
 	MYARCHITECTURE=arm64
 	MYCOMPILER=aarch64-linux-gnu-gcc
 	KERNELDIR ?= /home/marco/Documents/yocto_auto_linux_bsp15.0/build_s32v234bbmini_release/tmp/work/s32v234bbmini-fsl-linux/linux-s32v2xx/4.1.26-r0/git
+else ifeq ($(MYPLATFORM), gplat)
+	# S32G-PROCEVB-S plus S32GRV-PLATEVB
+	NUMBER_SWITCHES ?= 1
+	SPI_FREQ ?= 12000000
+	SPI_SWAP ?= 1
+	SPI_BPW ?= 16
+	SPI_BPW_MSG ?= 16
+	NR_CFG_BLOCKS ?= 1
+
+	MYTOOLCHAIN=aarch64-linux-gnu-
+	MYARCHITECTURE=arm64
+	MYCOMPILER=aarch64-linux-gnu-gcc
 else
         $(error Unsupported platform specified!)
 endif
