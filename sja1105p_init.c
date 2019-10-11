@@ -2,7 +2,7 @@
 * AVB switch driver module for SJA1105
 * Copyright (C) 2016 - 2017 NXP Semiconductors
 *
-* Copyright 2018 NXP
+* Copyright 2018-2019 NXP
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -55,7 +55,9 @@
 #include "sja1105p_cfg_file.h"
 #include "sja1105p_general_status.h"
 #include "sja1105p_debugfs.h"
+#ifndef DISABLE_SWITCHDEV
 #include "sja1105p_switchdev.h"
+#endif
 #include "sja1105p_init.h"
 
 /*
@@ -72,17 +74,21 @@ static int max_hz = SPI_FREQUENCY; /* 25 MHz is the default but might have to be
 module_param(max_hz, int, S_IRUGO);
 MODULE_PARM_DESC(max_hz, "SPI bus speed may be limited for the remote SJA1105P application board, 25MHz is the maximum");
 
+#ifndef DISABLE_HOST_NETDEV
 static char *ifname =  "eth0";
 module_param(ifname, charp, S_IRUGO);
 MODULE_PARM_DESC(ifname, "Network interface name for SJA1105P Host port: default to 'eth0'");
+#endif
 
 int verbosity =  0;
 module_param(verbosity, int, S_IRUGO);
 MODULE_PARM_DESC(verbosity, "Trace level'");
 
+#ifndef DISABLE_SWITCHDEV
 static int enable_switchdev = 1;
 module_param(enable_switchdev, int, S_IRUGO);
 MODULE_PARM_DESC(enable_switchdev, "Enable the switchdev driver");
+#endif
 
 
 /* This is not very elegant. Linux linux treats every switch as a separate device,
@@ -181,6 +187,7 @@ static bool sja1105p_check_device_status(struct spi_device *spi)
 	return ret;
 }
 
+#ifndef DISABLE_HOST_NETDEV
 static int sja1105p_config_avb_param_check(struct spi_device *spi, struct sja1105p_context_data *sw_ctx)
 {
 	struct sja1105p_cfg_block * avb_param_block;
@@ -235,6 +242,7 @@ static int sja1105p_config_avb_param_check(struct spi_device *spi, struct sja110
 	since non AVB configurations may exist */
 	return 0;
 }
+#endif
 
 static bool sja1105p_post_cfg_load_check(struct spi_device *spi,  struct sja1105p_context_data *sw_ctx)
 {
@@ -362,10 +370,12 @@ static int sja1105p_configuration_load(const struct firmware *config_file, struc
 		goto err_cfg;
 	}
 
+#ifndef DISABLE_HOST_NETDEV
 	if (sja1105p_config_avb_param_check(spi, data) < 0) {
 		dev_err(&spi->dev, "SJA1105P failed to get net device!\n");
 		goto err_cfg;
 	}
+#endif
 
 	if (verbosity > 1) dev_info(&spi->dev, "swap_required %d nb_words %d dev_addr %08x\n", swap_required, nb_words, (u32)SJA1105P_CONFIG_START_ADDRESS);
 
@@ -562,9 +572,11 @@ int sja1105p_probe_final(struct sja1105p_context_data *switch_ctx)
 	dev_info(&switch_ctx->spi_dev->dev, "%d switch%s initialized successfully!\n", switches_active, (switches_active > 1)?"es":"");
 	read_unlock(&rwlock);
 
+#ifndef DISABLE_SWITCHDEV
 	/* only init switchdev, if all switches were detected and initialized correctly */
 	if (enable_switchdev)
 		nxp_swdev_init(sja1105p_context_arr);
+#endif
 
 	return 0;
 }
@@ -736,8 +748,10 @@ module_init(sja1105p_driver_init);
 
 static void __exit sja1105p_driver_exit(void)
 {
+#ifndef DISABLE_SWITCHDEV
 	if (enable_switchdev)
 		nxp_swdev_exit();
+#endif
 
 	spi_unregister_driver( &sja1105p_driver );
 }
