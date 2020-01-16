@@ -48,8 +48,8 @@ else ifeq ($(MYPLATFORM), bbmini)
 	MYARCHITECTURE=arm64
 	MYCOMPILER=aarch64-linux-gnu-gcc
 	KERNELDIR ?= /home/marco/Documents/yocto_auto_linux_bsp15.0/build_s32v234bbmini_release/tmp/work/s32v234bbmini-fsl-linux/linux-s32v2xx/4.1.26-r0/git
-else ifeq ($(MYPLATFORM), gplat)
-	# S32G-PROCEVB-S plus S32GRV-PLATEVB
+else ifneq (, $(filter $(MYPLATFORM), gplat rdb))
+	# S32G-PROCEVB-S plus S32GRV-PLATEVB or S32G-VNP-RDB
 	NUMBER_SWITCHES ?= 1
 	SPI_FREQ ?= 12000000
 	SPI_SWAP ?= 1
