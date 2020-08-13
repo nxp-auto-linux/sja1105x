@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright (c) 2020 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -341,6 +341,36 @@ avb_parameters.append({
 })
 
 #############################################################################
+# ACU configuration
+#############################################################################
+
+acu_configuration = make_table_by_layout(acu_configuration_table_layout, layoutid_map)
+c.append(acu_configuration)
+acu_configuration.append({
+    "DISABLE_IF"             : 0x0,
+    "RGMII_MEAS_SETUP"       : 0x0,
+    "TS_CONFIG"              : 0x65,
+    "CFG_PAD_JTAG"           : 0x2000000,
+    "CFG_PAD_SPI"            : 0x12040407,
+    "CFG_PAD_MISC"           : 0x120412,
+    "CFG_PAD_MII4_ID"        : 0x0348,
+    "CFG_PAD_MII3_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII2_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII1_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII0_ID"        : 0x0348,
+    "CFG_PAD_MII4_RX"        : 0x2020212,
+    "CFG_PAD_MII4_TX"        : 0x12121212,
+    "CFG_PAD_MII3_RX"        : 0x2020212,
+    "CFG_PAD_MII3_TX"        : 0x12121212,
+    "CFG_PAD_MII2_RX"        : 0x2020212,
+    "CFG_PAD_MII2_TX"        : 0x12121212,
+    "CFG_PAD_MII1_RX"        : 0x2020212,
+    "CFG_PAD_MII1_TX"        : 0x12121212,
+    "CFG_PAD_MII0_RX"        : 0x2020212,
+    "CFG_PAD_MII0_TX"        : 0x12121212
+})
+
+#############################################################################
 # MII Mode Control Parameters
 #############################################################################
 
@@ -365,7 +395,7 @@ mii_mode_parameters.append({
     "PHY_MAC[2]"      : PHY_MODE,  # not applicable for RGMII,
     "xMII_MODE[3]"    : RGMII,
     "PHY_MAC[3]"      : PHY_MODE,  # not applicable for RGMII,
-    "xMII_MODE[4]"    : MII,
+    "xMII_MODE[4]"    : UNUSED,
     "PHY_MAC[4]"      : MAC_MODE,  # not applicable for RGMII,
 })
 

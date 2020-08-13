@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright (c) 2020 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -92,7 +92,7 @@ general_parameters.append({
     "SEND_META[1]"           : 0,
     "CASC_PORT"              : 6,
     "MIRR_PORT"              : 6,                   # No default mirror port. Set through reconfiguration
-    "HOST_PORT"              : 0,
+    "HOST_PORT"              : 2,
     "VIMARKER"               : 0xFFFFFFFF,
     "VIMASK"                 : 0xFFFFFFFF,
     "TPID"                   : 0x88A8,
@@ -338,6 +338,36 @@ avb_parameters.append({
     "DESTMETA"   : 0x026037DECADE,
     "CAS_MASTER" : 1,
     "L2CBS"      : 0
+})
+
+#############################################################################
+# ACU configuration
+#############################################################################
+
+acu_configuration = make_table_by_layout(acu_configuration_table_layout, layoutid_map)
+c.append(acu_configuration)
+acu_configuration.append({
+    "DISABLE_IF"             : 0x0,
+    "RGMII_MEAS_SETUP"       : 0x0,
+    "TS_CONFIG"              : 0x65,
+    "CFG_PAD_JTAG"           : 0x2000000,
+    "CFG_PAD_SPI"            : 0x12040407,
+    "CFG_PAD_MISC"           : 0x120412,
+    "CFG_PAD_MII4_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII3_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII2_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII1_ID"        : 0x2323,
+    "CFG_PAD_MII0_ID"        : 0x0348, # TXC Internal delay enabled
+    "CFG_PAD_MII4_RX"        : 0x2020212,
+    "CFG_PAD_MII4_TX"        : 0x12121212,
+    "CFG_PAD_MII3_RX"        : 0x2020212,
+    "CFG_PAD_MII3_TX"        : 0x12121212,
+    "CFG_PAD_MII2_RX"        : 0x2020212,
+    "CFG_PAD_MII2_TX"        : 0x12121212,
+    "CFG_PAD_MII1_RX"        : 0x2020212,
+    "CFG_PAD_MII1_TX"        : 0x12121212,
+    "CFG_PAD_MII0_RX"        : 0x2020212,
+    "CFG_PAD_MII0_TX"        : 0x12121212
 })
 
 #############################################################################
