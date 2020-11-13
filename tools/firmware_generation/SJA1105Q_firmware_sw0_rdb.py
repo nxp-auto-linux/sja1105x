@@ -341,6 +341,36 @@ avb_parameters.append({
 })
 
 #############################################################################
+# ACU configuration
+#############################################################################
+
+acu_configuration = make_table_by_layout(acu_configuration_table_layout, layoutid_map)
+c.append(acu_configuration)
+acu_configuration.append({
+    "DISABLE_IF"             : 0x0,
+    "RGMII_MEAS_SETUP"       : 0x0,
+    "TS_CONFIG"              : 0x65,
+    "CFG_PAD_JTAG"           : 0x2000000,
+    "CFG_PAD_SPI"            : 0x12040407,
+    "CFG_PAD_MISC"           : 0x120412,
+    "CFG_PAD_MII4_ID"        : 0x2323,
+    "CFG_PAD_MII3_ID"        : 0x2323,
+    "CFG_PAD_MII2_ID"        : 0x2323,
+    "CFG_PAD_MII1_ID"        : 0x2323,
+    "CFG_PAD_MII0_ID"        : 0x4848, # TXC and RXC Internal delays enabled
+    "CFG_PAD_MII4_RX"        : 0x2020212,
+    "CFG_PAD_MII4_TX"        : 0x12121212,
+    "CFG_PAD_MII3_RX"        : 0x2020212,
+    "CFG_PAD_MII3_TX"        : 0x12121212,
+    "CFG_PAD_MII2_RX"        : 0x2020212,
+    "CFG_PAD_MII2_TX"        : 0x12121212,
+    "CFG_PAD_MII1_RX"        : 0x2020212,
+    "CFG_PAD_MII1_TX"        : 0x12121212,
+    "CFG_PAD_MII0_RX"        : 0x2020212,
+    "CFG_PAD_MII0_TX"        : 0x12121212
+})
+
+#############################################################################
 # MII Mode Control Parameters
 #############################################################################
 
