@@ -356,7 +356,7 @@ acu_configuration.append({
     "CFG_PAD_MII4_ID"        : 0x0348, # TXC Internal delay enabled
     "CFG_PAD_MII3_ID"        : 0x0348, # TXC Internal delay enabled
     "CFG_PAD_MII2_ID"        : 0x0348, # TXC Internal delay enabled
-    "CFG_PAD_MII1_ID"        : 0x2323,
+    "CFG_PAD_MII1_ID"        : 0x4848, # 90 degree TXC and RXC ID enabled
     "CFG_PAD_MII0_ID"        : 0x0348, # TXC Internal delay enabled
     "CFG_PAD_MII4_RX"        : 0x2020212,
     "CFG_PAD_MII4_TX"        : 0x12121212,
