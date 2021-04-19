@@ -28,7 +28,7 @@ class ConfigHexFile(object):
                 self.checksum = intel_hex_line[(9 + 2 * self.byte_count):(11 + 2 * self.byte_count)]
                 if self.record_type == "00":
                     self.data = ""
-                    for i in xrange(0, self.byte_count):
+                    for i in range(0, self.byte_count):
                         self.data = self.data + intel_hex_line[7 + 2 * (self.byte_count - i):9 + 2 * (self.byte_count - i)]
 
         def __str__(self):
@@ -47,7 +47,7 @@ class ConfigHexFile(object):
         with open(filename) as f:
             for line in f:
                 self.lines.append(self.IntelHexLine(line))
-                #print self.lines[len(self.lines) - 1]
+                #print(self.lines[len(self.lines) - 1])
 
     def count_data_words(self):
         """
@@ -83,14 +83,14 @@ class Hex2BinConverter:
           if line.record_type == "00":
             offset = line.get_address()
             if offset != expected_offset:
-                print "Error in Hex file at offset %d expected %d\n" % (offset, expected_offset)
+                print("Error in Hex file at offset {} expected {}\n".format(offset, expected_offset))
             else:
                 byte_count = line.get_byte_count()
                 expected_offset = offset + byte_count
                 if (byte_count & 3) != 0:
-                    print "Error lines are expected to contain whole numbers of 32 bit words\n" 
+                    print("Error lines are expected to contain whole numbers of 32 bit words\n")
                 else:
-                    word_count = byte_count / 4
+                    word_count = byte_count // 4
                     for i in range (word_count):
                         val = 0
                         if be1_le0:

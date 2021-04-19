@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright 2017-2021 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -540,14 +540,14 @@ def chk_vl_lookup_table_layout_0(configuration, bytes):
       if t.tableid == 17:
          assert len (t.entries) == 1, "General Configuration Table is expected to have a single entry"
          return t.entries[0]['VLLUPFORMAT'] == 0
-   print "WARN: table 17 not found"
+   print("WARN: table 17 not found")
 
 def chk_vl_lookup_table_layout_1(configuration, bytes):
    for t in configuration.tables:
       if t.tableid == 17:
          assert len (t.entries) == 1, "General Configuration Table is expected to have a single entry"
          return t.entries[0]['VLLUPFORMAT'] == 1
-   print "WARN: table 17 not found"
+   print("WARN: table 17 not found")
 
 def chk_tt_vl_layout(configuration, bytes):
    selector = struct.unpack("<I",bytes[:4])[0] >> 31

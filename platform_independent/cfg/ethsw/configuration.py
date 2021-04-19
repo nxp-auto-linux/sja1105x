@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright 2017-2021 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,8 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 
 import struct
 import binascii
-import intelhex
-import prettytable
+from . import intelhex
+from . import prettytable
 
 def make_table_by_id(tableid):
     return Table(tableid=tableid)
@@ -42,7 +42,7 @@ def get_tableid_for_layout(layout, layoutid_map):
     return tableids[0]
 
 def crc32(bytes):
-    return binascii.crc32(bytes)& 0xffffffff
+    return binascii.crc32(bytes) & 0xffffffff
 
 class Field (object):
     def __init__(self, l = None):
@@ -92,12 +92,12 @@ class Entry(object):
 
         top = (words * 32)
 
-        #print self.len
+        #print(self.len)
 
         for field in self.fields:
             field.offset = top - field.len
             top = field.offset
-            #print "%s, %d" %(field.name, field.offset)
+            #print("{}, {}".format(field.name, field.offset))
 
     def _get_field_by_name(self, name):
         for field in self.fields:
@@ -107,11 +107,11 @@ class Entry(object):
     def __setitem__(self, key, value):
         f = self._get_field_by_name(key)
         if f is None: raise KeyError('no Field %s in layout' % key)
-        if not ((type(value) == int) or (type(value) == long)):
-            print "Warning type of %s is not int or long but %s" %(key, type(value))
+        if not (type(value) == int):
+            print("Warning type of {} is not int or long but {}".format(key, type(value)))
         f.value = value & ((1 << f.len) - 1)
         if value != f.value:
-            print "WARNING: %s truncated" % key
+            print("WARNING: {} truncated".format(key))
 
     def __getitem__(self, key):
         f = self._get_field_by_name(key)
@@ -135,7 +135,7 @@ class Entry(object):
             d |= field.value << field.offset
 
         byte_like = list()
-        for i in range(self.len / 8):
+        for i in range(self.len // 8):
             byte_like.append((d >> i*8) & 0xff)
 
         bytes = bytearray(byte_like)
@@ -181,7 +181,7 @@ class Table(object):
 
         bytes = bytearray()
         bytes += struct.pack("<I", self.tableid << 24 )
-        bytes += struct.pack("<I", len(payload_bytes) / 4 )
+        bytes += struct.pack("<I", len(payload_bytes) // 4 )
         bytes += struct.pack("<I", crc32(bytes))
         bytes += payload_bytes
         bytes += struct.pack("<I", crc32(payload_bytes))
@@ -212,7 +212,7 @@ class Table(object):
 
         layouts = self._get_layouts_for_id(self.tableid, layoutid_map)
         if len(layouts) > 1:
-            print "INFO: Skipping table %d for now. Retry in second pass" %(self.tableid)
+            print("INFO: Skipping table {} for now. Retry in second pass".format(self.tableid))
         else:
             self.second_stage(layoutid_map, configuration)
 
@@ -224,8 +224,8 @@ class Table(object):
 
         layouts = self._get_layouts_for_id(self.tableid, layoutid_map)
 
-        bytes_per_entry = Entry(layouts[0][0]).len/4
-        nentries = len(bytes) / bytes_per_entry
+        bytes_per_entry = Entry(layouts[0][0]).len // 4
+        nentries = len(bytes) // bytes_per_entry
 
 
         while len(bytes) > 0:
@@ -277,9 +277,9 @@ class Configuration(object):
 
     def _decode_table(self, bytes, layoutid_map):
         tableid = struct.unpack("<I", bytes[0:4])[0] >> 24
-        #print tableid
+        #print(tableid)
         length = struct.unpack("<I", bytes[4:8])[0]
-        #print length
+        #print(length)
         crc1 = struct.unpack("<I", bytes[8:12])[0]
         bytes = bytes[12:(4+length)*4]
 
@@ -299,9 +299,9 @@ class Configuration(object):
 
     def from_bytes(self, bytes, layoutid_map):
         assert len(bytes) % 4 == 0
-        print "Total bytes: %d" %(len(bytes))
+        print("Total bytes: {}".format(len(bytes)))
         self.deviceid = self.peek_device_id(bytes)
-        print "Device ID: %08x" % self.deviceid
+        print("Device ID: {}".format(self.deviceid))
 
         bytes = bytes[4:]
 

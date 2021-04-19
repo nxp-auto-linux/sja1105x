@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright 2017-2021 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,4 +50,4 @@ table_map = {SJA1105QS_DEVICEID: ethsw.tables_sja1105pqrs.layoutid_map,
 
 c.from_hex(args.hex, table_map[device_id])
 
-print c
+print(c)

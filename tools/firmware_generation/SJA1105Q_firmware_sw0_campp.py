@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2020 NXP
+Copyright 2020-2021 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -261,7 +261,7 @@ c.append(l2_policing_table)
 
 for i in range(NO_ETH_PORTS * NO_PRIORITIES):
     l2_policing_table.append({
-        "SHARINDX"         : i / NO_PRIORITIES, #setting nSharedIdx for a given port to a single policing block for all prios
+        "SHARINDX"         : i // NO_PRIORITIES, #setting nSharedIdx for a given port to a single policing block for all prios
         "SMAX"             : 2**16-1,
         "RATE"             : 2**16-1,
         "MAXLEN"           : 1526,
@@ -421,8 +421,8 @@ to_binary_converter.create_bin_file(filename, output_bin_filename, endiannes);
 # Executive Summary
 #############################################################################
 
-print "Number of bytes: %d" %(len(c.to_bytes()))
-print "======================"
+print("Number of bytes: {}".format(len(c.to_bytes())))
+print("======================")
 
-print c
+print(c)
 

@@ -1,6 +1,6 @@
 """
 The MIT License (MIT)
-Copyright (c) 2017 NXP
+Copyright 2017-2021 NXP
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -743,7 +743,7 @@ c.to_hex(filename)
 # Executive Summary
 #############################################################################
 
-print "Generation completed"
-print "Number of bytes: %d" %(len(c.to_bytes()))
+print("Generation completed")
+print("Number of bytes: {}".format(len(c.to_bytes())))
 
 

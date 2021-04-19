@@ -7,9 +7,8 @@ aka HEX file.
 
 Installation
 ============
-In order to run the files a Python 2 installation (>=2.6, <3) is required.
-Python can be obtained from the python.org website. Note that Python 3.x is
-not supported yet.
+In order to run the files a Python 2 installation (>=2.6) or Python 3.x
+is required. Python can be obtained from the python.org website.
 It is recommended to put the python binary in the Window's PATH environment.
 
 This package does not need to be installed and can be be extracted to a
@@ -65,3 +64,5 @@ Changelog
     Moved to new branch of generation scripts
     Support for SJA1105/T and SJA1105/P/Q/R/S
     Added examples for Qbv (time aware shaper) and Qci (stream based policing)
+* Revision 0.4 16.04.2021
+    Update to use Python 3.x
