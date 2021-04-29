@@ -2,7 +2,7 @@
 * AVB switch driver module for SJA1105
 * Copyright (C) 2016 - 2017 NXP Semiconductors
 *
-* Copyright 2018-2019 NXP
+* Copyright 2018-2019, 2021 NXP
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -43,6 +43,7 @@
 #include <linux/of_device.h>
 #include <linux/netdevice.h>
 #include <linux/debugfs.h>
+#include <linux/version.h>
 
 #include "NXP_SJA1105P_clockGenerationUnit.h"
 #include "NXP_SJA1105P_auxiliaryConfigurationUnit.h"
@@ -503,7 +504,12 @@ static int sja1105p_init_dt(struct sja1105p_context_data *switch_ctx)
 	return 0;
 
 err_dt:
-	if (pdata) kzfree(pdata);
+	if (pdata)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
+		kfree_sensitive(pdata);
+#else
+		kzfree(pdata);
+#endif
 	switch_ctx->pdata = NULL;
 	return -EINVAL;
 }
