@@ -7,8 +7,8 @@ aka HEX file.
 
 Installation
 ============
-In order to run the files a Python 2 installation (>=2.6) or Python 3.x
-is required. Python can be obtained from the python.org website.
+In order to run the files a Python 3.x installation is required.
+Python can be obtained from the python.org website.
 It is recommended to put the python binary in the Window's PATH environment.
 
 This package does not need to be installed and can be be extracted to a
