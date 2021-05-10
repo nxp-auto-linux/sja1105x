@@ -3,7 +3,7 @@
 BOARD ?= evb
 NR_SWITCHES ?= 2
 
-PYTHON=python
+PYTHON=python3
 CFG_GEN_TOOL = SJA1105Q_firmware_sw
 
 .PHONY: all firmware clean
